@@ -91,24 +91,24 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/itemCopyDownload"
+                android:contentDescription="@string/a11y_copy_download"
                 style="@style/Widget.GitHubUploader.Button.Tonal"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/copy"
                 app:icon="@drawable/ic_content_copy"
                 app:iconPadding="4dp"
                 app:iconSize="16dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/itemCopyPreview"
+                android:contentDescription="@string/a11y_copy_preview"
                 style="@style/Widget.GitHubUploader.Button.Tonal"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="@string/copy"
-                app:icon="@drawable/ic_content_copy"
+                app:icon="@drawable/ic_link"
                 app:iconPadding="4dp"
                 app:iconSize="16dp" />
 

@@ -102,4 +102,6 @@
     <string name="download_url_label">Ссылка для скачивания</string>
     <string name="preview_url_label">Ссылка для просмотра</string>
     <string name="asset_url_label">Актив</string>
+    <string name="a11y_copy_download">Скопировать ссылку скачивания</string>
+    <string name="a11y_copy_preview">Скопировать ссылку просмотра</string>
 </resources>
