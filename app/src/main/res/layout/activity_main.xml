@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/md_background">
+    android:background="@drawable/bg_app_background">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBar"
@@ -92,7 +92,7 @@
             </LinearLayout>
 
             <!-- FILE -->
-            <com.google.android.material.card.MaterialCardView
+            <FrameLayout
                 style="@style/Widget.GitHubUploader.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -206,10 +206,10 @@
                             android:text="@string/change_file" />
                     </LinearLayout>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </FrameLayout>
 
             <!-- OPTIONS -->
-            <com.google.android.material.card.MaterialCardView
+            <FrameLayout
                 style="@style/Widget.GitHubUploader.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -250,7 +250,7 @@
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="@color/md_on_surface_variant" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </FrameLayout>
 
             <!-- UPLOAD -->
             <Button
@@ -301,7 +301,7 @@
                 android:textColor="@color/md_on_surface_variant" />
 
             <!-- RESULT: DOWNLOAD -->
-            <com.google.android.material.card.MaterialCardView
+            <FrameLayout
                 style="@style/Widget.GitHubUploader.Card"
                 android:id="@+id/downloadCard"
                 android:layout_width="match_parent"
@@ -390,10 +390,10 @@
                             app:iconSize="18dp" />
                     </LinearLayout>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </FrameLayout>
 
             <!-- RESULT: PREVIEW -->
-            <com.google.android.material.card.MaterialCardView
+            <FrameLayout
                 style="@style/Widget.GitHubUploader.Card"
                 android:id="@+id/previewCard"
                 android:layout_width="match_parent"
@@ -482,7 +482,7 @@
                             app:iconSize="18dp" />
                     </LinearLayout>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </FrameLayout>
 
             <!-- FOOTER ACTIONS -->
             <LinearLayout

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Night: шапка по-прежнему фиолетовая, поэтому статус-бар держит
+         светлые иконки; панель навигации лежит на тёмном фоне приложения. -->
+    <style name="Theme.GitHubUploader" parent="Theme.GitHubUploader.Base">
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+    </style>
+
+</resources>

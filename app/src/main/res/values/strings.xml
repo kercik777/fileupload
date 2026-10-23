@@ -30,7 +30,7 @@
     <string name="share">Поделиться</string>
     <string name="history">История</string>
     <string name="settings">Настройки</string>
-    <string name="delete_release">Удалить релиз</string>
+    <string name="delete_release">Удалить</string>
     <string name="no_links">Ссылки появятся после загрузки</string>
     <string name="download_label">Скачивание</string>
     <string name="preview_label">Просмотр в браузере</string>

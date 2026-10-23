@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Theme.GitHubUploader" parent="Theme.Material3.DayNight.NoActionBar">
+    <!--
+        Все значения темы лежат в Theme.GitHubUploader.Base, чтобы light- и
+        night-варианты содержали только флаги оформления системных панелей.
+        Тогда результат одинаков независимо от того, как билд-система
+        объединяет стили с одинаковым именем.
+    -->
+    <style name="Theme.GitHubUploader.Base" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/md_primary</item>
         <item name="colorOnPrimary">@color/md_on_primary</item>
         <item name="colorPrimaryContainer">@color/md_primary_container</item>
@@ -26,10 +32,22 @@
         <item name="colorOutline">@color/md_outline</item>
         <item name="colorOutlineVariant">@color/md_outline_variant</item>
 
-        <item name="android:statusBarColor">@color/status_bar_gradient</item>
-        <item name="android:navigationBarColor">@color/status_bar_gradient</item>
+        <!-- Прозрачные системные панели: dibujo приложения уходит под статус-бар
+             и под панель навигации. -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarScrim">@android:color/transparent</item>
+        <item name="android:navigationBarScrim">@android:color/transparent</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+    </style>
+
+    <!-- Light: статус-бар лежит на фиолетовом градиенте шапки — нужны светлые
+         иконки; панель навигации лежит на светлом фоне приложения. -->
+    <style name="Theme.GitHubUploader" parent="Theme.GitHubUploader.Base">
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
     </style>
 
     <!-- Widget styles -->
@@ -55,30 +73,50 @@
         <item name="cornerRadius">20dp</item>
     </style>
 
+    <!-- Кнопки в ряд: отключаем капс, ограничиваем одной строкой, убираем часть
+         внутренних отступов Material3, чтобы текст не обрезалось на узких экранах. -->
     <style name="Widget.GitHubUploader.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
         <item name="android:textAllCaps">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="app:contentInsetStart">6dp</item>
+        <item name="app:contentInsetEnd">6dp</item>
     </style>
 
     <style name="Widget.GitHubUploader.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:textAllCaps">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="app:contentInsetStart">8dp</item>
+        <item name="app:contentInsetEnd">8dp</item>
     </style>
 
     <style name="Widget.GitHubUploader.Button.Text" parent="Widget.Material3.Button.TextButton">
         <item name="android:textAllCaps">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
     </style>
 
-    <style name="Widget.GitHubUploader.Card" parent="Widget.Material3.CardView.Filled">
-        <item name="cardCornerRadius">20dp</item>
-        <item name="cardElevation">1dp</item>
-        <item name="cardUseCompatPadding">false</item>
-        <item name="contentPadding">16dp</item>
+    <!-- Карты — обычные ViewGroup с градиентным фоном. MaterialCardView
+         намеренно не используется: его state-list animator ссылается на
+         атрибуты темы, которые не обязаны резолвиться в любой билд-системе
+         (иначе краш NumberFormatException: "?2130903938"). -->
+    <style name="Widget.GitHubUploader.Card">
+        <item name="android:background">@drawable/bg_card_surface</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:clipToPadding">false</item>
+        <item name="android:elevation">1dp</item>
+        <item name="android:foreground">?android:attr/selectableItemBackground</item>
+        <item name="android:foregroundGravity">center</item>
     </style>
 
-    <style name="Widget.GitHubUploader.Card.Elevated" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardCornerRadius">20dp</item>
-        <item name="cardElevation">3dp</item>
-        <item name="cardUseCompatPadding">false</item>
-        <item name="contentPadding">16dp</item>
+    <style name="Widget.GitHubUploader.Card.Elevated">
+        <item name="android:background">@drawable/bg_card_surface</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:clipToPadding">false</item>
+        <item name="android:elevation">4dp</item>
+        <item name="android:foreground">?android:attr/selectableItemBackground</item>
+        <item name="android:foregroundGravity">center</item>
     </style>
 
     <style name="TextAppearance.GitHubUploader.Headline" parent="TextAppearance.Material3.HeadlineSmall">
@@ -89,10 +127,8 @@
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="TextAppearance.GitHubUploader.Body" parent="TextAppearance.Material3.BodyMedium">
-    </style>
+    <style name="TextAppearance.GitHubUploader.Body" parent="TextAppearance.Material3.BodyMedium" />
 
-    <style name="TextAppearance.GitHubUploader.Caption" parent="TextAppearance.Material3.LabelSmall">
-    </style>
+    <style name="TextAppearance.GitHubUploader.Caption" parent="TextAppearance.Material3.LabelSmall" />
 
 </resources>

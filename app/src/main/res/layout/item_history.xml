@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     style="@style/Widget.GitHubUploader.Card"
@@ -145,4 +145,4 @@
             android:textColor="@color/md_on_surface_variant"
             tools:text="https://cdn.jsdelivr.net/gh/…@files/…" />
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+</FrameLayout>

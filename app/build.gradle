@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    compileSdk 37
 
     defaultConfig {
         applicationId "com.bayram.githubfileupload"
         namespace "com.bayram.githubfileupload"
         minSdkVersion 21
-        targetSdkVersion 34
+        targetSdkVersion 37
         versionCode 2
         versionName "2.0"
     }
