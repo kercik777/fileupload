@@ -16,7 +16,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -30,10 +29,11 @@ import java.util.List;
 
 /**
  * Экран истории загрузок в онлайн-режиме (через GitHub API) с локальным кэшем.
- * Показывает все файлы в репозитории (даже загруженные до установки приложения)
- * и позволяет удалять любые файлы (ZIP, APK, фото, видео, документы и др.).
+ * Позволяет удалять как файл целиком, так и по отдельности только ссылку скачивания
+ * или только ссылку просмотра.
  */
-public class HistoryActivity extends AppCompatActivity implements HistoryAdapter.Listener {
+public class HistoryActivity extends AppCompatActivity
+        implements HistoryAdapter.Listener, DeleteChoiceDialogFragment.Listener {
 
     private RecyclerView recycler;
     private ProgressBar progressSync;
@@ -196,53 +196,116 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
 
     @Override
     public void onDelete(UploadItem item) {
+        showDeleteDialog(item, 0);
+    }
+
+    @Override
+    public void onDeleteDownloadOnly(UploadItem item) {
+        showDeleteDialog(item, GitHubHistoryManager.DELETE_DOWNLOAD_ONLY);
+    }
+
+    @Override
+    public void onDeletePreviewOnly(UploadItem item) {
+        showDeleteDialog(item, GitHubHistoryManager.DELETE_PREVIEW_ONLY);
+    }
+
+    private void showDeleteDialog(UploadItem item, int forcedDeleteMode) {
         if (deletingBusy || item == null) {
             return;
         }
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.history_delete_title)
-                .setMessage(getString(R.string.history_delete_message, item.name))
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.delete_release, (d, which) -> performDelete(item))
-                .show();
+        if (item.id == 0) {
+            item.id = System.nanoTime();
+        }
+        DeleteChoiceDialogFragment.newInstance(item, forcedDeleteMode)
+                .show(getSupportFragmentManager(), "delete-choice");
     }
 
-    private void performDelete(UploadItem item) {
+    @Override
+    public void onDeleteConfirmed(long itemId, int deleteMode) {
+        if (deletingBusy) {
+            return;
+        }
+        UploadItem target = findById(itemId);
+        if (target == null) {
+            return;
+        }
+        performDelete(target, deleteMode);
+    }
+
+    private UploadItem findById(long itemId) {
+        for (UploadItem it : currentItems) {
+            if (it != null && it.id == itemId) {
+                return it;
+            }
+        }
+        return null;
+    }
+
+    private void performDelete(final UploadItem item, final int deleteMode) {
         deletingBusy = true;
         progressSync.setVisibility(View.VISIBLE);
         Toast.makeText(this, R.string.history_deleting, Toast.LENGTH_SHORT).show();
 
         GitHubConfig cfg = Prefs.getConfig(this);
-        historyManager.deleteItem(this, cfg, item, new GitHubHistoryManager.Callback<Boolean>() {
-            @Override
-            public void onSuccess(Boolean ok) {
-                deletingBusy = false;
-                if (isFinishing()) return;
-                progressSync.setVisibility(View.GONE);
-                removeFromCurrent(item);
-                Toast.makeText(HistoryActivity.this, R.string.history_deleted,
-                        Toast.LENGTH_SHORT).show();
-            }
+        historyManager.deleteByMode(this, cfg, item, deleteMode,
+                new GitHubHistoryManager.Callback<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean ok) {
+                        deletingBusy = false;
+                        if (isFinishing()) return;
+                        progressSync.setVisibility(View.GONE);
 
-            @Override
-            public void onError(String error) {
-                deletingBusy = false;
-                if (isFinishing()) return;
-                progressSync.setVisibility(View.GONE);
-                Toast.makeText(HistoryActivity.this,
-                        (error == null || error.isEmpty()) ? getString(R.string.error_network) : error,
-                        Toast.LENGTH_LONG).show();
-            }
-        });
+                        boolean stillHasAnyLink = item.hasDownload() || item.hasPreview();
+                        if (deleteMode == GitHubHistoryManager.DELETE_DOWNLOAD_ONLY && stillHasAnyLink) {
+                            notifyUpdatedInPlace(item);
+                            Toast.makeText(HistoryActivity.this,
+                                    R.string.history_deleted_download_only, Toast.LENGTH_SHORT).show();
+                        } else if (deleteMode == GitHubHistoryManager.DELETE_PREVIEW_ONLY && stillHasAnyLink) {
+                            notifyUpdatedInPlace(item);
+                            Toast.makeText(HistoryActivity.this,
+                                    R.string.history_deleted_preview_only, Toast.LENGTH_SHORT).show();
+                        } else {
+                            removeFromCurrent(item);
+                            Toast.makeText(HistoryActivity.this,
+                                    R.string.history_deleted, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        deletingBusy = false;
+                        if (isFinishing()) return;
+                        progressSync.setVisibility(View.GONE);
+                        Toast.makeText(HistoryActivity.this,
+                                (error == null || error.isEmpty())
+                                        ? getString(R.string.error_network) : error,
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    private void notifyUpdatedInPlace(UploadItem target) {
+        int idx = currentItems.indexOf(target);
+        if (idx >= 0) {
+            adapter.notifyItemChanged(idx);
+        } else {
+            adapter.notifyDataSetChanged();
+        }
     }
 
     private void removeFromCurrent(UploadItem target) {
-        for (int i = currentItems.size() - 1; i >= 0; i--) {
-            if (currentItems.get(i).sameEntry(target)) {
-                currentItems.remove(i);
+        int removedIdx = currentItems.indexOf(target);
+        if (removedIdx >= 0) {
+            currentItems.remove(removedIdx);
+            adapter.notifyItemRemoved(removedIdx);
+        } else {
+            for (int i = currentItems.size() - 1; i >= 0; i--) {
+                if (currentItems.get(i).sameEntry(target)) {
+                    currentItems.remove(i);
+                }
             }
+            adapter.notifyDataSetChanged();
         }
-        adapter.notifyDataSetChanged();
         if (currentItems.isEmpty()) {
             emptyBox.setVisibility(View.VISIBLE);
             tvEmpty.setText(R.string.history_empty);

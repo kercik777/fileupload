@@ -131,6 +131,36 @@ public final class Prefs {
         saveHistory(ctx, next);
     }
 
+    /** Обновляет запись в локальном кэше (например, после удаления только одного из двух вариантов). */
+    public static void updateHistoryItem(Context ctx, UploadItem matchTarget, UploadItem updated) {
+        if (matchTarget == null || updated == null) {
+            return;
+        }
+        List<UploadItem> list = getHistory(ctx);
+        List<UploadItem> next = new ArrayList<>();
+        boolean replaced = false;
+        for (UploadItem it : list) {
+            if (it == null) continue;
+            if (!replaced && it.sameEntry(matchTarget)) {
+                next.add(updated);
+                replaced = true;
+            } else {
+                next.add(it);
+            }
+        }
+        if (!replaced) {
+            next.add(0, updated);
+        }
+        saveHistory(ctx, next);
+    }
+
+    public static UploadItem snapshotOf(UploadItem src) {
+        if (src == null) {
+            return null;
+        }
+        return GSON.fromJson(GSON.toJson(src), UploadItem.class);
+    }
+
     public static void removeHistory(Context ctx, long id) {
         List<UploadItem> list = getHistory(ctx);
         List<UploadItem> next = new ArrayList<>();

@@ -41,7 +41,7 @@
     <string name="menu_history">История</string>
     <string name="menu_settings">Настройки</string>
     <string name="about_text">GitHub Uploader — загружает файлы в релиз GitHub и даёт две ссылки: для скачивания и для просмотра прямо в браузере.</string>
-    <string name="version_label">Версия 2.1</string>
+    <string name="version_label">Версия 2.2</string>
     <string name="made_with">Сделано с ❤ в Zürich</string>
 
     <!-- File format picker dialog -->
@@ -83,18 +83,33 @@
     <string name="config_hint_token">Для работы нужен токен с правом repo (или public_repo для публичных репозиториев). Токен хранится только на устройстве.</string>
     <string name="config_hint_preview">Файлы для просмотра уходят на отдельный бранч репозитория, оттуда работают прямые ссылки raw и CDN jsDelivr.</string>
 
-    <!-- History (Online + Offline cache) -->
+    <!-- History (Online + Smart Delete) -->
     <string name="history_empty">В репозитории пока нет загруженных файлов</string>
     <string name="history_loading">Загрузка истории из GitHub…</string>
     <string name="history_need_config">Укажите владельца, репозиторий и токен в настройках, чтобы загрузить все ваши файлы из GitHub</string>
     <string name="history_open_settings">Открыть настройки</string>
     <string name="history_refresh">Обновить</string>
     <string name="history_clear">Очистить локальный кэш</string>
-    <string name="history_deleted">Файл удалён</string>
+    <string name="history_deleted">Файл полностью удалён</string>
+    <string name="history_deleted_download_only">Ссылка скачивания удалена · просмотр сохранён</string>
+    <string name="history_deleted_preview_only">Ссылка просмотра удалена · скачивание сохранено</string>
     <string name="history_cache_cleared">Локальный кэш очищен</string>
-    <string name="history_deleting">Удаление файла…</string>
+    <string name="history_deleting">Удаление…</string>
     <string name="history_delete_title">Удалить файл?</string>
+    <string name="history_delete_what_title">Что удалить?</string>
+    <string name="history_delete_both_subtitle">«%1$s» загружен и для скачивания, и для просмотра</string>
     <string name="history_delete_message">Файл «%1$s» будет удалён из GitHub и из истории.</string>
+    <string name="history_delete_single_download_msg">Файл «%1$s» будет удалён из GitHub Releases и убран из истории.</string>
+    <string name="history_delete_single_preview_msg">Файл «%1$s» будет удалён из ветки репозитория и убран из истории.</string>
+    <string name="history_delete_keep_preview_title">Удалить только скачивание?</string>
+    <string name="history_delete_keep_preview_msg">«%1$s» будет удалён из GitHub Releases, а ссылка для просмотра в браузере останется рабочей.</string>
+    <string name="history_delete_keep_download_title">Удалить только просмотр?</string>
+    <string name="history_delete_keep_download_msg">«%1$s» будет удалён из ветки репозитория, а ссылка для скачивания из релиза останется рабочей.</string>
+    <string name="delete_opt_download_title">Удалить скачивание</string>
+    <string name="delete_opt_download_desc">Удалит из Releases · просмотр останется</string>
+    <string name="delete_opt_preview_title">Удалить просмотр</string>
+    <string name="delete_opt_preview_desc">Удалит из ветки files · скачивание останется</string>
+    <string name="delete_opt_both_btn">Удалить оба варианта</string>
     <string name="history_loaded_at">Загружено: %1$s</string>
 
     <!-- Preview -->
@@ -120,4 +135,6 @@
     <string name="asset_url_label">Актив</string>
     <string name="a11y_copy_download">Скопировать ссылку скачивания</string>
     <string name="a11y_copy_preview">Скопировать ссылку просмотра</string>
+    <string name="a11y_delete_download">Удалить только ссылку скачивания</string>
+    <string name="a11y_delete_preview">Удалить только ссылку просмотра</string>
 </resources>

@@ -26,6 +26,10 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.VH> {
 
         void onDelete(UploadItem item);
 
+        void onDeleteDownloadOnly(UploadItem item);
+
+        void onDeletePreviewOnly(UploadItem item);
+
         void onOpen(UploadItem item);
 
         void onShare(UploadItem item);
@@ -53,19 +57,23 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.VH> {
         UploadItem item = items.get(position);
         holder.name.setText(item.name);
 
+        boolean hasDownload = item.hasDownload();
+        boolean hasPreview = item.hasPreview();
+        boolean hasBoth = hasDownload && hasPreview;
+
         StringBuilder metaSb = new StringBuilder();
         metaSb.append(FileUtils.formatSize(item.size));
         if (item.time > 0) {
             metaSb.append(" · ").append(formatTime(item.time));
         }
-        if (item.tag != null && !item.tag.isEmpty() && item.hasDownload()) {
+        if (item.tag != null && !item.tag.isEmpty() && hasDownload) {
             metaSb.append(" · ").append(item.tag);
         }
         holder.meta.setText(metaSb.toString());
 
-        if (item.hasDownload() && item.hasPreview()) {
+        if (hasBoth) {
             holder.badge.setText(R.string.upload_mode_both);
-        } else if (item.hasPreview()) {
+        } else if (hasPreview) {
             holder.badge.setText(R.string.upload_mode_preview);
         } else {
             holder.badge.setText(R.string.upload_mode_download);
@@ -82,9 +90,6 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.VH> {
             holder.icon.setImageResource(item.iconRes());
         }
 
-        boolean hasDownload = item.hasDownload();
-        boolean hasPreview = item.hasPreview();
-
         holder.downloadRow.setVisibility(hasDownload ? View.VISIBLE : View.GONE);
         if (hasDownload) {
             holder.downloadUrl.setText(item.downloadUrl);
@@ -95,12 +100,17 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.VH> {
             holder.previewUrl.setText(item.bestPreviewUrl());
         }
 
-        // Кнопки Открыть / Поделиться / Удалить всегда доступны для любого файла
+        // Быстрые кнопки удаления конкретной ссылки показываются только когда есть ОБА варианта
+        holder.btnQuickDeleteDownload.setVisibility(hasBoth ? View.VISIBLE : View.GONE);
+        holder.btnQuickDeletePreview.setVisibility(hasBoth ? View.VISIBLE : View.GONE);
+
         holder.btnOpen.setIconResource((item.isImage() || item.isVideo())
                 ? R.drawable.ic_eye : R.drawable.ic_open_in_new);
 
         holder.btnCopyDownload.setOnClickListener(v -> listener.onCopyDownload(item));
         holder.btnCopyPreview.setOnClickListener(v -> listener.onCopyPreview(item));
+        holder.btnQuickDeleteDownload.setOnClickListener(v -> listener.onDeleteDownloadOnly(item));
+        holder.btnQuickDeletePreview.setOnClickListener(v -> listener.onDeletePreviewOnly(item));
         holder.btnOpen.setOnClickListener(v -> listener.onOpen(item));
         holder.btnShare.setOnClickListener(v -> listener.onShare(item));
         holder.btnDelete.setOnClickListener(v -> listener.onDelete(item));
@@ -149,6 +159,8 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.VH> {
         final TextView previewUrl;
         final MaterialButton btnCopyDownload;
         final MaterialButton btnCopyPreview;
+        final MaterialButton btnQuickDeleteDownload;
+        final MaterialButton btnQuickDeletePreview;
         final MaterialButton btnOpen;
         final MaterialButton btnShare;
         final MaterialButton btnDelete;
@@ -167,6 +179,8 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.VH> {
             previewUrl = itemView.findViewById(R.id.itemPreviewUrl);
             btnCopyDownload = itemView.findViewById(R.id.itemCopyDownload);
             btnCopyPreview = itemView.findViewById(R.id.itemCopyPreview);
+            btnQuickDeleteDownload = itemView.findViewById(R.id.itemQuickDeleteDownload);
+            btnQuickDeletePreview = itemView.findViewById(R.id.itemQuickDeletePreview);
             btnOpen = itemView.findViewById(R.id.itemOpen);
             btnShare = itemView.findViewById(R.id.itemShare);
             btnDelete = itemView.findViewById(R.id.itemDelete);

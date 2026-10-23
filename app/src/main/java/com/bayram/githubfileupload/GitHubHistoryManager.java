@@ -28,10 +28,14 @@ import okhttp3.ResponseBody;
  * Онлайн-менеджер истории загрузок через GitHub API:
  * - Загружает все файлы из GitHub Releases и из ветки предпросмотра (files/) даже после
  *   переустановки приложения или на новом телефоне.
- * - Удаляет любые файлы (ZIP, APK, фото, видео, документы и т.д.) как из Releases,
- *   так и из репозитория.
+ * - Поддерживает раздельное удаление: только скачивание (Release), только просмотр (ветка files)
+ *   или оба варианта сразу.
  */
 public class GitHubHistoryManager {
+
+    public static final int DELETE_DOWNLOAD_ONLY = 1;
+    public static final int DELETE_PREVIEW_ONLY = 2;
+    public static final int DELETE_ALL = 3;
 
     public interface Callback<T> {
         void onSuccess(T result);
@@ -78,20 +82,127 @@ public class GitHubHistoryManager {
         }).start();
     }
 
-    /** Универсальное удаление любого файла (релиз, репозиторий или оба варианта). */
+    /**
+     * Удаление с выбором режима:
+     * - DELETE_DOWNLOAD_ONLY: удаляет только из Releases, сохраняя ссылку на просмотр;
+     * - DELETE_PREVIEW_ONLY: удаляет только из ветки files, сохраняя ссылку на скачивание;
+     * - DELETE_ALL: удаляет всё и убирает запись из истории.
+     */
+    public void deleteByMode(Context ctx, GitHubConfig cfg, UploadItem item, int deleteMode,
+                             Callback<Boolean> cb) {
+        if (item == null) {
+            post(cb, true, null);
+            return;
+        }
+        if (deleteMode == DELETE_DOWNLOAD_ONLY) {
+            deleteDownloadOnly(ctx, cfg, item, cb);
+        } else if (deleteMode == DELETE_PREVIEW_ONLY) {
+            deletePreviewOnly(ctx, cfg, item, cb);
+        } else {
+            deleteItem(ctx, cfg, item, cb);
+        }
+    }
+
+    private void deleteDownloadOnly(Context ctx, GitHubConfig cfg, UploadItem item,
+                                    Callback<Boolean> cb) {
+        final Context appCtx = ctx.getApplicationContext();
+        final UploadItem before = Prefs.snapshotOf(item);
+        final boolean hasValidCfg = cfg != null && cfg.isValid();
+
+        if (!hasValidCfg || !item.hasDownload()) {
+            applyClearDownloadFields(item);
+            persistAfterPartialDelete(appCtx, before, item);
+            post(cb, true, null);
+            return;
+        }
+
+        releases.deleteItemFromRelease(cfg, item, new GitHubReleaseManager.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean ok) {
+                applyClearDownloadFields(item);
+                persistAfterPartialDelete(appCtx, before, item);
+                post(cb, true, null);
+            }
+
+            @Override
+            public void onError(String error) {
+                post(cb, null, error);
+            }
+        });
+    }
+
+    private void deletePreviewOnly(Context ctx, GitHubConfig cfg, UploadItem item,
+                                   Callback<Boolean> cb) {
+        final Context appCtx = ctx.getApplicationContext();
+        final UploadItem before = Prefs.snapshotOf(item);
+        final boolean hasValidCfg = cfg != null && cfg.isValid();
+        final String repoPath = GitHubRepoManager.extractRepoPathFromItem(item);
+
+        if (!hasValidCfg || repoPath.isEmpty()) {
+            applyClearPreviewFields(item);
+            persistAfterPartialDelete(appCtx, before, item);
+            post(cb, true, null);
+            return;
+        }
+
+        String branch = (item.previewBranch != null && !item.previewBranch.trim().isEmpty())
+                ? item.previewBranch.trim() : cfg.previewBranch;
+        repos.deleteFile(cfg, branch, repoPath, item.repoFileSha, new GitHubRepoManager.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean ok) {
+                applyClearPreviewFields(item);
+                persistAfterPartialDelete(appCtx, before, item);
+                post(cb, true, null);
+            }
+
+            @Override
+            public void onError(String error) {
+                post(cb, null, error);
+            }
+        });
+    }
+
+    private static void applyClearDownloadFields(UploadItem item) {
+        item.downloadUrl = "";
+        item.releaseId = 0L;
+        item.releaseAssetId = 0L;
+        item.releaseAssetName = "";
+        item.tag = "";
+        item.mode = item.hasPreview() ? "preview" : "download";
+    }
+
+    private static void applyClearPreviewFields(UploadItem item) {
+        item.previewUrl = "";
+        item.previewRawUrl = "";
+        item.pageUrl = "";
+        item.previewPath = "";
+        item.repoFileSha = "";
+        item.mode = item.hasDownload() ? "download" : "preview";
+    }
+
+    private static void persistAfterPartialDelete(Context appCtx, UploadItem before, UploadItem current) {
+        if (current.hasDownload() || current.hasPreview()) {
+            Prefs.updateHistoryItem(appCtx, before, current);
+        } else {
+            Prefs.removeHistoryItem(appCtx, before);
+        }
+    }
+
+    /** Полное удаление любого файла (релиз, репозиторий или оба варианта). */
     public void deleteItem(Context ctx, GitHubConfig cfg, UploadItem item, Callback<Boolean> cb) {
         if (item == null) {
             post(cb, true, null);
             return;
         }
         final Context appCtx = ctx.getApplicationContext();
+        final UploadItem before = Prefs.snapshotOf(item);
         final boolean hasValidCfg = cfg != null && cfg.isValid();
         final boolean needReleaseDelete = hasValidCfg && item.hasDownload();
         final String repoPath = GitHubRepoManager.extractRepoPathFromItem(item);
         final boolean needRepoDelete = hasValidCfg && !repoPath.isEmpty();
 
         if (!needReleaseDelete && !needRepoDelete) {
-            Prefs.removeHistoryItem(appCtx, item);
+            Prefs.removeHistoryItem(appCtx, before);
             post(cb, true, null);
             return;
         }
@@ -101,9 +212,9 @@ public class GitHubHistoryManager {
                 @Override
                 public void onSuccess(Boolean ok) {
                     if (needRepoDelete) {
-                        deleteRepoPart(appCtx, cfg, item, repoPath, cb);
+                        deleteRepoPart(appCtx, cfg, item, before, repoPath, cb);
                     } else {
-                        Prefs.removeHistoryItem(appCtx, item);
+                        Prefs.removeHistoryItem(appCtx, before);
                         post(cb, true, null);
                     }
                 }
@@ -114,18 +225,18 @@ public class GitHubHistoryManager {
                 }
             });
         } else {
-            deleteRepoPart(appCtx, cfg, item, repoPath, cb);
+            deleteRepoPart(appCtx, cfg, item, before, repoPath, cb);
         }
     }
 
     private void deleteRepoPart(Context appCtx, GitHubConfig cfg, UploadItem item,
-                                String repoPath, Callback<Boolean> cb) {
+                                UploadItem before, String repoPath, Callback<Boolean> cb) {
         String branch = (item.previewBranch != null && !item.previewBranch.trim().isEmpty())
                 ? item.previewBranch.trim() : cfg.previewBranch;
         repos.deleteFile(cfg, branch, repoPath, item.repoFileSha, new GitHubRepoManager.Callback<Boolean>() {
             @Override
             public void onSuccess(Boolean ok) {
-                Prefs.removeHistoryItem(appCtx, item);
+                Prefs.removeHistoryItem(appCtx, before);
                 post(cb, true, null);
             }
 
@@ -226,7 +337,6 @@ public class GitHubHistoryManager {
         List<UploadItem> result = new ArrayList<>();
         try (Response resp = http.newCall(req).execute()) {
             if (resp.code() == 404) {
-                // Ветка files или папка files/ ещё не создана — это нормально
                 return result;
             }
             if (!resp.isSuccessful()) {
@@ -286,11 +396,9 @@ public class GitHubHistoryManager {
         boolean[] usedPreview = new boolean[previewItems.size()];
         List<UploadItem> combined = new ArrayList<>();
 
-        // 1) Склеиваем пары (Release + Preview), относящиеся к одной загрузке "Оба варианта"
         for (UploadItem rel : releaseItems) {
             int matchedIdx = -1;
 
-            // Сначала проверяем точное совпадение в локальном кэше
             for (UploadItem loc : localCache) {
                 if (loc != null && loc.hasDownload() && loc.hasPreview()
                         && rel.downloadUrl.equals(loc.downloadUrl)) {
@@ -307,7 +415,6 @@ public class GitHubHistoryManager {
                 }
             }
 
-            // Если кэша нет (свежая установка приложения) — сопоставляем по имени и размеру
             if (matchedIdx < 0) {
                 String relClean = FileUtils.sanitize(rel.name);
                 for (int i = 0; i < previewItems.size(); i++) {
@@ -342,14 +449,12 @@ public class GitHubHistoryManager {
             combined.add(rel);
         }
 
-        // 2) Добавляем все оставшиеся файлы из ветки предпросмотра (фото, видео и др.)
         for (int i = 0; i < previewItems.size(); i++) {
             if (!usedPreview[i]) {
                 combined.add(previewItems.get(i));
             }
         }
 
-        // 3) Обогащаем локальными данными (sourceUri, id, точное время если у файла не было штампа)
         long seqId = System.currentTimeMillis();
         for (UploadItem item : combined) {
             for (UploadItem loc : localCache) {
@@ -372,7 +477,6 @@ public class GitHubHistoryManager {
             }
         }
 
-        // 4) Сортируем по дате (новые сверху)
         Collections.sort(combined, (a, b) -> {
             int cmp = Long.compare(b.time, a.time);
             if (cmp != 0) return cmp;
@@ -415,7 +519,7 @@ public class GitHubHistoryManager {
         return new Request.Builder()
                 .header("Authorization", "token " + cfg.token)
                 .header("Accept", "application/vnd.github.v3+json")
-                .header("User-Agent", "GitHubUploader/2.1");
+                .header("User-Agent", "GitHubUploader/2.2");
     }
 
     private static String str(JsonObject o, String key) {

@@ -220,7 +220,45 @@ public class MainActivity extends AppCompatActivity
         super.onResume();
         refreshPermissionState();
         config = Prefs.getConfig(this);
+        syncLastItemWithHistory();
         updateIdleStatus();
+    }
+
+    /** Синхронизирует карточки последнего загруженного файла, если в Истории удалили одну или обе ссылки. */
+    private void syncLastItemWithHistory() {
+        if (lastItem == null || uploading) {
+            return;
+        }
+        java.util.List<UploadItem> history = Prefs.getHistory(this);
+        UploadItem matched = null;
+        for (UploadItem it : history) {
+            if (it != null && lastItem.id > 0 && it.id == lastItem.id) {
+                matched = it;
+                break;
+            }
+        }
+        if (matched == null) {
+            for (UploadItem it : history) {
+                if (it != null && it.sameEntry(lastItem)) {
+                    matched = it;
+                    break;
+                }
+            }
+        }
+        if (matched == null) {
+            lastItem = null;
+            hideCards();
+            return;
+        }
+        lastItem = matched;
+        downloadCard.setVisibility(lastItem.hasDownload() ? View.VISIBLE : View.GONE);
+        if (lastItem.hasDownload()) {
+            tvDownloadUrl.setText(lastItem.downloadUrl);
+        }
+        previewCard.setVisibility(lastItem.hasPreview() ? View.VISIBLE : View.GONE);
+        if (lastItem.hasPreview()) {
+            tvPreviewUrl.setText(lastItem.bestPreviewUrl());
+        }
     }
 
     @Override
