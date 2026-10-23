@@ -156,11 +156,8 @@ public class GitHubRepoManager {
 
     private void ensureBranch(GitHubConfig cfg, String defaultBranch, String relativePath,
                               File file, String message, Callback<PreviewResult> cb) {
-        String preview = cfg.previewBranch;
-        if (preview == null || preview.trim().isEmpty()) {
-            preview = "files";
-        }
-        preview = preview.trim();
+        final String preview = ((cfg.previewBranch == null || cfg.previewBranch.trim().isEmpty())
+                ? "files" : cfg.previewBranch).trim();
 
         if (preview.equalsIgnoreCase(defaultBranch)) {
             commit(cfg, preview, relativePath, file, message, cb);

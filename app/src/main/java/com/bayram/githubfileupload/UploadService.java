@@ -53,15 +53,23 @@ public class UploadService {
         releases.upload(cfg, run.tag, run.file, run.fileName, run.mime, percent -> {
             int mapped = startPct + (int) ((percent / 100.0) * (endPct - startPct));
             cb.onProgress(mapped);
-        }, url -> {
-            run.downloadUrl = url;
-            if (thenPreview) {
-                doPreview(cfg, run, 50, 100, cb);
-            } else {
-                cb.onProgress(endPct);
-                finish(cfg, run, cb);
+        }, new GitHubReleaseManager.Callback<String>() {
+            @Override
+            public void onSuccess(String url) {
+                run.downloadUrl = url;
+                if (thenPreview) {
+                    doPreview(cfg, run, 50, 100, cb);
+                } else {
+                    cb.onProgress(endPct);
+                    finish(cfg, run, cb);
+                }
             }
-        }, err -> cb.onError(err));
+
+            @Override
+            public void onError(String error) {
+                cb.onError(error);
+            }
+        });
     }
 
     private void doPreview(final GitHubConfig cfg, final Run run, final int startPct,

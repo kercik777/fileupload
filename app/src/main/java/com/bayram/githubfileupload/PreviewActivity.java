@@ -100,7 +100,7 @@ public class PreviewActivity extends AppCompatActivity {
                 showError(getString(R.string.preview_unsupported));
                 return true;
             });
-            videoView.setOnTouchListener(v -> {
+            videoView.setOnTouchListener((v, event) -> {
                 if (videoView.isPlaying()) {
                     videoView.pause();
                 } else {
