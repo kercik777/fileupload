@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card_surface"
+    android:orientation="vertical"
+    android:padding="22dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/format_dialog_title"
+        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+        android:textColor="@color/md_on_surface"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:text="@string/format_dialog_subtitle"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:textColor="@color/md_on_surface_variant" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/optionFormatPhoto"
+        style="@style/Widget.GitHubUploader.Button.Tonal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:text="@string/format_photo"
+        android:textSize="15sp"
+        app:icon="@drawable/ic_image"
+        app:iconGravity="textStart"
+        app:iconPadding="10dp"
+        app:iconSize="22dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/optionFormatVideo"
+        style="@style/Widget.GitHubUploader.Button.Tonal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:text="@string/format_video"
+        android:textSize="15sp"
+        app:icon="@drawable/ic_video"
+        app:iconGravity="textStart"
+        app:iconPadding="10dp"
+        app:iconSize="22dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/optionFormatFile"
+        style="@style/Widget.Material3.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:text="@string/format_file"
+        android:textAllCaps="false"
+        android:textSize="15sp"
+        app:icon="@drawable/ic_folder"
+        app:iconGravity="textStart"
+        app:iconPadding="10dp"
+        app:iconSize="22dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCancelFormat"
+        style="@style/Widget.GitHubUploader.Button.Text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="6dp"
+        android:text="@string/cancel" />
+</LinearLayout>

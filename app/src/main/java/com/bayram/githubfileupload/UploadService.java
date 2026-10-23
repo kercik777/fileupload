@@ -3,7 +3,7 @@ package com.bayram.githubfileupload;
 import java.io.File;
 
 /**
- * Оркестратор: по ошибкам и выбору пользователя выполняет
+ * Оркестратор: по выбору пользователя выполняет
  * загрузку в релиз (скачивание) и/или в репозиторий (просмотр).
  */
 public class UploadService {
@@ -50,13 +50,16 @@ public class UploadService {
 
     private void doDownload(final GitHubConfig cfg, final Run run, final int startPct,
                             final int endPct, final Callback cb, final boolean thenPreview) {
-        releases.upload(cfg, run.tag, run.file, run.fileName, run.mime, percent -> {
+        releases.uploadWithMeta(cfg, run.tag, run.file, run.fileName, run.mime, percent -> {
             int mapped = startPct + (int) ((percent / 100.0) * (endPct - startPct));
             cb.onProgress(mapped);
-        }, new GitHubReleaseManager.Callback<String>() {
+        }, new GitHubReleaseManager.Callback<GitHubReleaseManager.ReleaseUploadResult>() {
             @Override
-            public void onSuccess(String url) {
-                run.downloadUrl = url;
+            public void onSuccess(GitHubReleaseManager.ReleaseUploadResult result) {
+                run.downloadUrl = result.downloadUrl;
+                run.releaseId = result.releaseId;
+                run.releaseAssetId = result.assetId;
+                run.releaseAssetName = result.assetName;
                 if (thenPreview) {
                     doPreview(cfg, run, 50, 100, cb);
                 } else {
@@ -84,6 +87,8 @@ public class UploadService {
                         run.previewCdn = result.cdnUrl;
                         run.previewRaw = result.rawUrl;
                         run.pageUrl = result.pageUrl;
+                        run.repoFileSha = result.sha;
+                        run.previewBranch = result.branch;
                         cb.onProgress(endPct);
                         finish(cfg, run, cb);
                     }
@@ -105,12 +110,17 @@ public class UploadService {
         item.time = System.currentTimeMillis();
         item.owner = cfg.owner;
         item.repo = cfg.repo;
-        item.previewBranch = cfg.previewBranch;
+        item.previewBranch = (run.previewBranch != null && !run.previewBranch.isEmpty())
+                ? run.previewBranch : cfg.previewBranch;
         item.downloadUrl = run.downloadUrl == null ? "" : run.downloadUrl;
         item.previewUrl = run.previewCdn == null ? "" : run.previewCdn;
         item.previewRawUrl = run.previewRaw == null ? "" : run.previewRaw;
         item.pageUrl = run.pageUrl == null ? "" : run.pageUrl;
         item.previewPath = run.previewPath == null ? "" : run.previewPath;
+        item.releaseId = run.releaseId;
+        item.releaseAssetId = run.releaseAssetId;
+        item.releaseAssetName = run.releaseAssetName == null ? "" : run.releaseAssetName;
+        item.repoFileSha = run.repoFileSha == null ? "" : run.repoFileSha;
 
         boolean hasDownload = !item.downloadUrl.isEmpty();
         boolean hasPreview = !item.previewUrl.isEmpty();
@@ -125,9 +135,14 @@ public class UploadService {
         String mime;
         String tag;
         String downloadUrl;
+        long releaseId;
+        long releaseAssetId;
+        String releaseAssetName;
         String previewCdn;
         String previewRaw;
         String previewPath;
+        String previewBranch;
+        String repoFileSha;
         String pageUrl;
     }
 }

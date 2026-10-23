@@ -20,8 +20,8 @@
             android:background="@android:color/transparent"
             app:navigationIcon="@drawable/ic_settings"
             app:navigationIconTint="@color/brand_on"
-            app:titleTextColor="@color/brand_on"
-            app:title="@string/hero_title" />
+            app:title="@string/hero_title"
+            app:titleTextColor="@color/brand_on" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -149,14 +149,15 @@
 
                         <FrameLayout
                             android:layout_width="64dp"
-                            android:layout_height="64dp">
+                            android:layout_height="64dp"
+                            android:background="@drawable/bg_thumb">
 
                             <ImageView
                                 android:id="@+id/fileIcon"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:contentDescription="@null"
-                                android:padding="12dp"
+                                android:padding="14dp"
                                 android:src="@drawable/ic_insert_drive_file"
                                 app:tint="@color/md_primary" />
 
@@ -203,6 +204,7 @@
                             style="@style/Widget.GitHubUploader.Button.Text"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_gravity="center_vertical"
                             android:text="@string/change_file" />
                     </LinearLayout>
                 </LinearLayout>
@@ -302,8 +304,8 @@
 
             <!-- RESULT: DOWNLOAD -->
             <FrameLayout
-                style="@style/Widget.GitHubUploader.Card"
                 android:id="@+id/downloadCard"
+                style="@style/Widget.GitHubUploader.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -322,8 +324,8 @@
                         android:orientation="horizontal">
 
                         <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:contentDescription="@null"
                             android:src="@drawable/ic_download"
                             app:tint="@color/md_primary" />
@@ -343,50 +345,54 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_thumb"
                         android:fontFamily="monospace"
+                        android:padding="10dp"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="@color/md_on_surface_variant"
                         tools:text="https://github.com/…/releases/download/latest/photo.jpg" />
 
-                    <LinearLayout
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCopyDownload"
+                        style="@style/Widget.GitHubUploader.Button.Tonal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
+                        android:text="@string/copy_link"
+                        app:icon="@drawable/ic_content_copy"
+                        app:iconGravity="textStart"
+                        app:iconPadding="8dp"
+                        app:iconSize="18dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
                         android:orientation="horizontal">
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnCopyDownload"
-                            android:contentDescription="@string/copy"
-                            style="@style/Widget.GitHubUploader.Button.Tonal"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            app:icon="@drawable/ic_content_copy"
-                            app:iconPadding="4dp"
-                            app:iconSize="18dp" />
-
-                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnOpenDownload"
-                            android:contentDescription="@string/open"
-                            style="@style/Widget.GitHubUploader.Button.Tonal"
+                            style="@style/Widget.GitHubUploader.Button.Outlined"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
                             android:layout_weight="1"
+                            android:text="@string/open"
                             app:icon="@drawable/ic_open_in_new"
-                            app:iconPadding="4dp"
+                            app:iconGravity="textStart"
+                            app:iconPadding="6dp"
                             app:iconSize="18dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnShareDownload"
-                            android:contentDescription="@string/share"
-                            style="@style/Widget.GitHubUploader.Button.Tonal"
+                            style="@style/Widget.GitHubUploader.Button.Outlined"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
                             android:layout_weight="1"
+                            android:text="@string/share"
                             app:icon="@drawable/ic_share"
-                            app:iconPadding="4dp"
+                            app:iconGravity="textStart"
+                            app:iconPadding="6dp"
                             app:iconSize="18dp" />
                     </LinearLayout>
                 </LinearLayout>
@@ -394,8 +400,8 @@
 
             <!-- RESULT: PREVIEW -->
             <FrameLayout
-                style="@style/Widget.GitHubUploader.Card"
                 android:id="@+id/previewCard"
+                style="@style/Widget.GitHubUploader.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -414,8 +420,8 @@
                         android:orientation="horizontal">
 
                         <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:contentDescription="@null"
                             android:src="@drawable/ic_eye"
                             app:tint="@color/md_tertiary" />
@@ -435,50 +441,54 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_thumb"
                         android:fontFamily="monospace"
+                        android:padding="10dp"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="@color/md_on_surface_variant"
                         tools:text="https://cdn.jsdelivr.net/gh/…@files/…/photo.jpg" />
 
-                    <LinearLayout
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCopyPreview"
+                        style="@style/Widget.GitHubUploader.Button.Tonal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
+                        android:text="@string/copy_link"
+                        app:icon="@drawable/ic_content_copy"
+                        app:iconGravity="textStart"
+                        app:iconPadding="8dp"
+                        app:iconSize="18dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
                         android:orientation="horizontal">
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnCopyPreview"
-                            android:contentDescription="@string/copy"
-                            style="@style/Widget.GitHubUploader.Button.Tonal"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            app:icon="@drawable/ic_content_copy"
-                            app:iconPadding="4dp"
-                            app:iconSize="18dp" />
-
-                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnOpenPreview"
-                            android:contentDescription="@string/open"
-                            style="@style/Widget.GitHubUploader.Button.Tonal"
+                            style="@style/Widget.GitHubUploader.Button.Outlined"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
                             android:layout_weight="1"
+                            android:text="@string/open"
                             app:icon="@drawable/ic_open_in_new"
-                            app:iconPadding="4dp"
+                            app:iconGravity="textStart"
+                            app:iconPadding="6dp"
                             app:iconSize="18dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnSharePreview"
-                            android:contentDescription="@string/share"
-                            style="@style/Widget.GitHubUploader.Button.Tonal"
+                            style="@style/Widget.GitHubUploader.Button.Outlined"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
                             android:layout_weight="1"
+                            android:text="@string/share"
                             app:icon="@drawable/ic_share"
-                            app:iconPadding="4dp"
+                            app:iconGravity="textStart"
+                            app:iconPadding="6dp"
                             app:iconSize="18dp" />
                     </LinearLayout>
                 </LinearLayout>
@@ -499,8 +509,10 @@
                     android:layout_weight="1"
                     android:text="@string/history"
                     app:icon="@drawable/ic_history"
-                    app:iconPadding="4dp"
-                    app:iconSize="20dp" />
+                    app:iconGravity="textStart"
+                    app:iconPadding="6dp"
+                    app:iconSize="20dp"
+                    app:iconTint="@color/md_primary" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSettings"
@@ -511,8 +523,10 @@
                     android:layout_weight="1"
                     android:text="@string/settings"
                     app:icon="@drawable/ic_settings"
-                    app:iconPadding="4dp"
-                    app:iconSize="20dp" />
+                    app:iconGravity="textStart"
+                    app:iconPadding="6dp"
+                    app:iconSize="20dp"
+                    app:iconTint="@color/md_primary" />
             </LinearLayout>
 
             <TextView

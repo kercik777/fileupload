@@ -67,13 +67,37 @@ public class ConfigActivity extends AppCompatActivity {
     }
 
     private GitHubConfig currentConfig() {
+        String owner = etOwner.getText() == null ? "" : etOwner.getText().toString().trim();
+        String repo = etRepo.getText() == null ? "" : etRepo.getText().toString().trim();
+
+        // Удобство: если пользователь вставил "https://github.com/owner/repo" или "owner/repo"
+        if (repo.startsWith("https://github.com/") || repo.startsWith("http://github.com/")) {
+            String tail = repo.substring(repo.indexOf("github.com/") + "github.com/".length());
+            while (tail.endsWith("/")) tail = tail.substring(0, tail.length() - 1);
+            if (tail.endsWith(".git")) tail = tail.substring(0, tail.length() - 4);
+            String[] parts = tail.split("/");
+            if (parts.length >= 2) {
+                if (owner.isEmpty()) owner = parts[0];
+                repo = parts[1];
+            }
+        } else if (repo.contains("/")) {
+            String[] parts = repo.split("/");
+            if (parts.length == 2) {
+                if (owner.isEmpty()) owner = parts[0].trim();
+                repo = parts[1].trim();
+            }
+        }
+        if (repo.endsWith(".git")) {
+            repo = repo.substring(0, repo.length() - 4);
+        }
+
         return new GitHubConfig(
-                etOwner.getText() == null ? "" : etOwner.getText().toString().trim(),
-                etRepo.getText() == null ? "" : etRepo.getText().toString().trim(),
+                owner,
+                repo,
                 etToken.getText() == null ? "" : etToken.getText().toString().trim(),
-                etBranch.getText() == null || etBranch.getText().toString().isEmpty()
+                etBranch.getText() == null || etBranch.getText().toString().trim().isEmpty()
                         ? "main" : etBranch.getText().toString().trim(),
-                etPreviewBranch.getText() == null || etPreviewBranch.getText().toString().isEmpty()
+                etPreviewBranch.getText() == null || etPreviewBranch.getText().toString().trim().isEmpty()
                         ? "files" : etPreviewBranch.getText().toString().trim());
     }
 
@@ -83,6 +107,8 @@ public class ConfigActivity extends AppCompatActivity {
             setStatus(getString(R.string.error_not_configured), true);
             return;
         }
+        etOwner.setText(cfg.owner);
+        etRepo.setText(cfg.repo);
         Prefs.saveConfig(this, cfg);
         setStatus(getString(R.string.config_saved), false);
         Toast.makeText(this, R.string.config_saved, Toast.LENGTH_SHORT).show();
@@ -102,7 +128,7 @@ public class ConfigActivity extends AppCompatActivity {
                 if (info.privateRepo) {
                     base += " · " + getString(R.string.error_private_repo);
                 }
-                setStatus(base, !info.privateRepo ? false : true);
+                setStatus(base, info.privateRepo);
             }
 
             @Override

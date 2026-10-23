@@ -6,12 +6,12 @@
     android:orientation="vertical"
     android:paddingStart="20dp"
     android:paddingEnd="20dp"
-    android:paddingBottom="12dp">
+    android:paddingBottom="16dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="8dp"
         android:gravity="center"
         android:text="@string/dialog_title_purpose"
         android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
@@ -35,8 +35,9 @@
         android:layout_marginTop="18dp"
         android:text="@string/option_download"
         app:icon="@drawable/ic_download"
-        app:iconPadding="12dp"
-        app:iconSize="24dp" />
+        app:iconGravity="textStart"
+        app:iconPadding="10dp"
+        app:iconSize="22dp" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/optionPreview"
@@ -46,8 +47,9 @@
         android:layout_marginTop="10dp"
         android:text="@string/option_preview"
         app:icon="@drawable/ic_eye"
-        app:iconPadding="12dp"
-        app:iconSize="24dp" />
+        app:iconGravity="textStart"
+        app:iconPadding="10dp"
+        app:iconSize="22dp" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/optionBoth"
@@ -56,7 +58,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:text="@string/option_both"
+        android:textAllCaps="false"
         app:icon="@drawable/ic_cloud_arrow_up"
-        app:iconPadding="12dp"
-        app:iconSize="24dp" />
+        app:iconGravity="textStart"
+        app:iconPadding="10dp"
+        app:iconSize="22dp" />
 </LinearLayout>

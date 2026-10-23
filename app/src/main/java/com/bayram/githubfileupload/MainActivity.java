@@ -1,13 +1,22 @@
 package com.bayram.githubfileupload;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.MediaStore;
+import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -21,13 +30,17 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.drawable.DrawableCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.File;
 
-public class MainActivity extends AppCompatActivity implements UploadChoiceBottomSheet.Listener {
+public class MainActivity extends AppCompatActivity
+        implements UploadChoiceBottomSheet.Listener, FileFormatDialogFragment.Listener {
+
+    private static final int REQ_STORAGE_PERMISSION = 3000;
 
     private MaterialToolbar toolbar;
     private View fileEmptyState;
@@ -47,6 +60,7 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
     private TextView tvPreviewUrl;
     private TextInputEditText etTag;
 
+    private Boolean checkPermission1 = false;
     private GitHubConfig config;
     private Uri pickedUri;
     private String pickedName = "";
@@ -57,8 +71,33 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
 
     private final Handler ui = new Handler(Looper.getMainLooper());
 
+    /** Системный файловый менеджер (SAF) для выбора любого файла. */
     private final ActivityResultLauncher<String[]> filePicker =
-            registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::onFilePicked);
+            registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
+                if (uri != null) {
+                    try {
+                        getContentResolver().takePersistableUriPermission(
+                                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (Exception ignored) {
+                    }
+                    onFilePicked(uri);
+                }
+            });
+
+    /** Прямой пикер галереи для выбора Фотографии или Видео. */
+    private final ActivityResultLauncher<Intent> mediaGalleryPicker =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null) {
+                        onFilePicked(uri);
+                    }
+                }
+            });
+
+    /** Резервный пикер по MIME-типу, если системная Галерея отсутствует. */
+    private final ActivityResultLauncher<String> fallbackContentPicker =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), this::onFilePicked);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +112,7 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
         fileSelectedState = findViewById(R.id.fileSelectedState);
         fileIcon = findViewById(R.id.fileIcon);
         fileThumb = findViewById(R.id.fileThumb);
+        fileThumb.setClipToOutline(true);
         tvFileName = findViewById(R.id.tvFileName);
         tvFileMeta = findViewById(R.id.tvFileMeta);
         tvStatus = findViewById(R.id.tvStatus);
@@ -91,8 +131,8 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
             etTag.setText(R.string.tag_default);
         }
 
-        fileEmptyState.setOnClickListener(v -> pickFile());
-        findViewById(R.id.btnChangeFile).setOnClickListener(v -> pickFile());
+        fileEmptyState.setOnClickListener(v -> showFormatDialog());
+        findViewById(R.id.btnChangeFile).setOnClickListener(v -> showFormatDialog());
         btnUpload.setOnClickListener(v -> onUploadClick());
 
         findViewById(R.id.btnCopyDownload).setOnClickListener(v -> copy(tvDownloadUrl.getText().toString()));
@@ -108,11 +148,77 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
         findViewById(R.id.btnSettings).setOnClickListener(v -> openConfig());
 
         updateIdleStatus();
+        checkStoragePermissionOnEnter();
+    }
+
+    /**
+     * Проверка полного доступа к файлам при входе в приложение:
+     * Android 11+ -> ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+     * Android 6..10 -> WRITE_EXTERNAL_STORAGE.
+     */
+    private void checkStoragePermissionOnEnter() {
+        checkPermission1 = false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // For Android 11+
+            if (Environment.isExternalStorageManager()) {
+                checkPermission1 = true;
+            } else {
+                try {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    Uri uri = Uri.fromParts("package", getPackageName(), null);
+                    intent.setData(uri);
+                    startActivity(intent);
+                } catch (Exception e) {
+                    try {
+                        Intent fallback = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                        startActivity(fallback);
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // For Android 6 to 10
+            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_DENIED) {
+                requestPermissions(
+                        new String[]{
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                Manifest.permission.READ_EXTERNAL_STORAGE
+                        },
+                        REQ_STORAGE_PERMISSION);
+            } else {
+                checkPermission1 = true;
+            }
+        } else {
+            checkPermission1 = true;
+        }
+    }
+
+    private void refreshPermissionState() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            checkPermission1 = Environment.isExternalStorageManager();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            checkPermission1 = checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED;
+        } else {
+            checkPermission1 = true;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_STORAGE_PERMISSION) {
+            checkPermission1 = grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        refreshPermissionState();
         config = Prefs.getConfig(this);
         updateIdleStatus();
     }
@@ -120,7 +226,20 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
+        tintMenuIconsWhite(menu);
         return true;
+    }
+
+    private void tintMenuIconsWhite(Menu menu) {
+        for (int i = 0; i < menu.size(); i++) {
+            MenuItem item = menu.getItem(i);
+            Drawable icon = item.getIcon();
+            if (icon != null) {
+                Drawable wrapped = DrawableCompat.wrap(icon.mutate());
+                DrawableCompat.setTint(wrapped, Color.WHITE);
+                item.setIcon(wrapped);
+            }
+        }
     }
 
     @Override
@@ -141,8 +260,39 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
         btnUpload.setEnabled(pickedUri != null);
     }
 
-    private void pickFile() {
-        filePicker.launch(new String[]{"*/*"});
+    private void showFormatDialog() {
+        new FileFormatDialogFragment().show(getSupportFragmentManager(), "file-format");
+    }
+
+    @Override
+    public void onFormatChosen(int format) {
+        if (format == FileFormatDialogFragment.FORMAT_PHOTO) {
+            launchPhotoPicker();
+        } else if (format == FileFormatDialogFragment.FORMAT_VIDEO) {
+            launchVideoPicker();
+        } else {
+            filePicker.launch(new String[]{"*/*"});
+        }
+    }
+
+    private void launchPhotoPicker() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            intent.setType("image/*");
+            mediaGalleryPicker.launch(intent);
+        } catch (Exception e) {
+            fallbackContentPicker.launch("image/*");
+        }
+    }
+
+    private void launchVideoPicker() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+            intent.setType("video/*");
+            mediaGalleryPicker.launch(intent);
+        } catch (Exception e) {
+            fallbackContentPicker.launch("video/*");
+        }
     }
 
     private void onFilePicked(Uri uri) {
@@ -150,8 +300,8 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
             return;
         }
         pickedUri = uri;
-        pickedName = FileUtils.nameOf(this, uri);
         pickedMime = FileUtils.mimeOf(this, uri);
+        pickedName = FileUtils.ensureExtension(FileUtils.nameOf(this, uri), pickedMime);
         pickedFile = null;
 
         fileEmptyState.setVisibility(View.GONE);
@@ -237,7 +387,7 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
                 new UploadService.Callback() {
                     @Override
                     public void onProgress(int percent) {
-                        progressBar.setProgress(Math.max(0, Math.min(100, percent)));
+                        ui.post(() -> progressBar.setProgress(Math.max(0, Math.min(100, percent))));
                     }
 
                     @Override
@@ -268,7 +418,7 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
         }
         if (item.hasPreview()) {
             previewCard.setVisibility(View.VISIBLE);
-            tvPreviewUrl.setText(item.previewUrl);
+            tvPreviewUrl.setText(item.bestPreviewUrl());
         } else {
             previewCard.setVisibility(View.GONE);
         }
@@ -303,11 +453,11 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
         if (item == null) {
             return;
         }
-        String url = item.previewUrl.isEmpty() ? item.previewRawUrl : item.previewUrl;
+        String url = item.bestPreviewUrl();
         if (item.isImage() || item.isVideo()) {
             Intent i = new Intent(this, PreviewActivity.class);
             i.putExtra(PreviewActivity.EXTRA_URL, url);
-            i.putExtra(PreviewActivity.EXTRA_MIME, item.mime);
+            i.putExtra(PreviewActivity.EXTRA_MIME, item.effectiveMime());
             i.putExtra(PreviewActivity.EXTRA_NAME, item.name);
             startActivity(i);
         } else {
@@ -334,10 +484,10 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
             toast(R.string.copied_nothing);
             return;
         }
-        Intent i = new Intent(android.content.Intent.ACTION_SEND);
+        Intent i = new Intent(Intent.ACTION_SEND);
         i.setType("text/plain");
-        i.putExtra(android.content.Intent.EXTRA_TEXT, text);
-        startActivity(android.content.Intent.createChooser(i, getString(R.string.share)));
+        i.putExtra(Intent.EXTRA_TEXT, text);
+        startActivity(Intent.createChooser(i, getString(R.string.share)));
     }
 
     private void openBrowser(String url) {
@@ -345,7 +495,7 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
             return;
         }
         try {
-            startActivity(new Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Exception e) {
             toast(R.string.preview_unsupported);

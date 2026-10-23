@@ -11,6 +11,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -20,7 +21,7 @@ public final class FileUtils {
     private FileUtils() {
     }
 
-    /** Имя файла из content:// uri. */
+    /** Имя файла из content:// или file:// uri. */
     public static String nameOf(Context ctx, Uri uri) {
         String name = null;
         if ("content".equals(uri.getScheme())) {
@@ -48,6 +49,33 @@ public final class FileUtils {
         return name;
     }
 
+    /** Гарантирует расширение файла по MIME-типу, если провайдер галереи не вернул его. */
+    public static String ensureExtension(String name, String mime) {
+        String base = (name == null || name.trim().isEmpty()) ? "file" : name.trim();
+        if (!extension(base).isEmpty() || mime == null || mime.isEmpty()) {
+            return base;
+        }
+        String ext = null;
+        try {
+            ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mime);
+        } catch (Exception ignored) {
+        }
+        if (ext == null || ext.isEmpty()) {
+            String m = mime.toLowerCase(Locale.ROOT);
+            if ("image/jpeg".equals(m) || "image/jpg".equals(m)) ext = "jpg";
+            else if ("image/png".equals(m)) ext = "png";
+            else if ("image/webp".equals(m)) ext = "webp";
+            else if ("image/gif".equals(m)) ext = "gif";
+            else if ("video/mp4".equals(m)) ext = "mp4";
+            else if ("video/webm".equals(m)) ext = "webm";
+            else if ("video/quicktime".equals(m)) ext = "mov";
+            else if ("audio/mpeg".equals(m)) ext = "mp3";
+            else if ("application/pdf".equals(m)) ext = "pdf";
+            else if ("application/zip".equals(m)) ext = "zip";
+        }
+        return (ext != null && !ext.isEmpty()) ? base + "." + ext : base;
+    }
+
     /** MIME-тип выбранного файла. */
     public static String mimeOf(Context ctx, Uri uri) {
         String mime = null;
@@ -55,8 +83,11 @@ public final class FileUtils {
             mime = ctx.getContentResolver().getType(uri);
         } catch (Exception ignored) {
         }
-        if (mime == null || mime.isEmpty()) {
-            mime = mimeFromName(nameOf(ctx, uri));
+        if (mime == null || mime.isEmpty() || "application/octet-stream".equalsIgnoreCase(mime)) {
+            String byName = mimeFromName(nameOf(ctx, uri));
+            if (byName != null && !byName.isEmpty()) {
+                mime = byName;
+            }
         }
         return (mime == null || mime.isEmpty()) ? "application/octet-stream" : mime;
     }
@@ -71,7 +102,7 @@ public final class FileUtils {
         }
         try {
             String type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
-            if (type != null) {
+            if (type != null && !type.isEmpty()) {
                 return type;
             }
         } catch (Exception ignored) {
@@ -91,6 +122,7 @@ public final class FileUtils {
             case "svg":
                 return "image/svg+xml";
             case "mp4":
+            case "m4v":
                 return "video/mp4";
             case "webm":
                 return "video/webm";
@@ -98,22 +130,31 @@ public final class FileUtils {
                 return "video/quicktime";
             case "mkv":
                 return "video/x-matroska";
+            case "3gp":
+                return "video/3gpp";
             case "mp3":
                 return "audio/mpeg";
             case "wav":
                 return "audio/wav";
             case "ogg":
                 return "audio/ogg";
+            case "m4a":
+                return "audio/mp4";
             case "pdf":
                 return "application/pdf";
             case "json":
                 return "application/json";
             case "txt":
+            case "md":
                 return "text/plain";
             case "csv":
                 return "text/csv";
             case "zip":
                 return "application/zip";
+            case "rar":
+                return "application/vnd.rar";
+            case "7z":
+                return "application/x-7z-compressed";
             case "apk":
                 return "application/vnd.android.package-archive";
             default:
@@ -149,7 +190,7 @@ public final class FileUtils {
         return n;
     }
 
-    /** Уникальное имя с префиксом-временем. */
+    /** Уникальное имя с префиксом-временем yyyyMMdd_HHmmss_<name>. */
     public static String uniqueName(String name) {
         String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(new Date());
         String ext = extension(name);
@@ -157,7 +198,53 @@ public final class FileUtils {
         return stamp + "_" + sanitize(base) + (ext.isEmpty() ? "" : "." + ext);
     }
 
+    /** Убирает префикс yyyyMMdd_HHmmss_ из имени файла в ветке предпросмотра. */
+    public static String stripTimestampPrefix(String rawName) {
+        if (rawName == null) {
+            return "";
+        }
+        if (rawName.length() > 16
+                && rawName.charAt(8) == '_'
+                && rawName.charAt(15) == '_'
+                && isDigits(rawName, 0, 8)
+                && isDigits(rawName, 9, 15)) {
+            return rawName.substring(16);
+        }
+        return rawName;
+    }
+
+    /** Извлекает время в мс из префикса yyyyMMdd_HHmmss_, либо 0. */
+    public static long parseTimestampPrefix(String rawName) {
+        if (rawName == null || rawName.length() <= 16
+                || rawName.charAt(8) != '_'
+                || rawName.charAt(15) != '_'
+                || !isDigits(rawName, 0, 8)
+                || !isDigits(rawName, 9, 15)) {
+            return 0L;
+        }
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT);
+            Date d = sdf.parse(rawName.substring(0, 15));
+            return d == null ? 0L : d.getTime();
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    private static boolean isDigits(String s, int from, int to) {
+        for (int i = from; i < to; i++) {
+            char c = s.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static String formatSize(long bytes) {
+        if (bytes <= 0) {
+            return "0 Б";
+        }
         if (bytes < 1024) {
             return bytes + " Б";
         }
@@ -221,5 +308,16 @@ public final class FileUtils {
             }
         }
         return sb.toString();
+    }
+
+    public static String decodeUrlSegment(String segment) {
+        if (segment == null) {
+            return "";
+        }
+        try {
+            return URLDecoder.decode(segment, "UTF-8");
+        } catch (Exception e) {
+            return segment;
+        }
     }
 }

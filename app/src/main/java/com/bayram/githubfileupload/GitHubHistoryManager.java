@@ -1,0 +1,452 @@
+package com.bayram.githubfileupload;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+
+/**
+ * Онлайн-менеджер истории загрузок через GitHub API:
+ * - Загружает все файлы из GitHub Releases и из ветки предпросмотра (files/) даже после
+ *   переустановки приложения или на новом телефоне.
+ * - Удаляет любые файлы (ZIP, APK, фото, видео, документы и т.д.) как из Releases,
+ *   так и из репозитория.
+ */
+public class GitHubHistoryManager {
+
+    public interface Callback<T> {
+        void onSuccess(T result);
+        void onError(String error);
+    }
+
+    private final OkHttpClient http;
+    private final Handler ui;
+    private final GitHubReleaseManager releases;
+    private final GitHubRepoManager repos;
+
+    public GitHubHistoryManager() {
+        http = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(45, TimeUnit.SECONDS)
+                .build();
+        ui = new Handler(Looper.getMainLooper());
+        releases = new GitHubReleaseManager();
+        repos = new GitHubRepoManager();
+    }
+
+    /** Загружает полную историю файлов напрямую из GitHub по API-ключу. */
+    public void loadOnlineHistory(Context ctx, GitHubConfig cfg, Callback<List<UploadItem>> cb) {
+        if (cfg == null || !cfg.isValid()) {
+            post(cb, null, "Сначала укажите владельца, репозиторий и токен в настройках");
+            return;
+        }
+        final Context appCtx = ctx.getApplicationContext();
+        new Thread(() -> {
+            try {
+                List<UploadItem> releaseItems = fetchReleaseAssets(cfg);
+                List<UploadItem> previewItems = fetchPreviewBranchFiles(cfg);
+                List<UploadItem> localCache = Prefs.getHistoryForRepo(appCtx, cfg);
+
+                List<UploadItem> merged = mergeOnlineAndLocal(cfg, releaseItems, previewItems, localCache);
+                Prefs.replaceRepoHistory(appCtx, cfg, merged);
+                post(cb, merged, null);
+            } catch (ApiException ae) {
+                post(cb, null, ae.getMessage());
+            } catch (Exception e) {
+                String msg = e.getMessage();
+                post(cb, null, (msg == null || msg.isEmpty()) ? "Ошибка сети при загрузке истории" : msg);
+            }
+        }).start();
+    }
+
+    /** Универсальное удаление любого файла (релиз, репозиторий или оба варианта). */
+    public void deleteItem(Context ctx, GitHubConfig cfg, UploadItem item, Callback<Boolean> cb) {
+        if (item == null) {
+            post(cb, true, null);
+            return;
+        }
+        final Context appCtx = ctx.getApplicationContext();
+        final boolean hasValidCfg = cfg != null && cfg.isValid();
+        final boolean needReleaseDelete = hasValidCfg && item.hasDownload();
+        final String repoPath = GitHubRepoManager.extractRepoPathFromItem(item);
+        final boolean needRepoDelete = hasValidCfg && !repoPath.isEmpty();
+
+        if (!needReleaseDelete && !needRepoDelete) {
+            Prefs.removeHistoryItem(appCtx, item);
+            post(cb, true, null);
+            return;
+        }
+
+        if (needReleaseDelete) {
+            releases.deleteItemFromRelease(cfg, item, new GitHubReleaseManager.Callback<Boolean>() {
+                @Override
+                public void onSuccess(Boolean ok) {
+                    if (needRepoDelete) {
+                        deleteRepoPart(appCtx, cfg, item, repoPath, cb);
+                    } else {
+                        Prefs.removeHistoryItem(appCtx, item);
+                        post(cb, true, null);
+                    }
+                }
+
+                @Override
+                public void onError(String error) {
+                    post(cb, null, error);
+                }
+            });
+        } else {
+            deleteRepoPart(appCtx, cfg, item, repoPath, cb);
+        }
+    }
+
+    private void deleteRepoPart(Context appCtx, GitHubConfig cfg, UploadItem item,
+                                String repoPath, Callback<Boolean> cb) {
+        String branch = (item.previewBranch != null && !item.previewBranch.trim().isEmpty())
+                ? item.previewBranch.trim() : cfg.previewBranch;
+        repos.deleteFile(cfg, branch, repoPath, item.repoFileSha, new GitHubRepoManager.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean ok) {
+                Prefs.removeHistoryItem(appCtx, item);
+                post(cb, true, null);
+            }
+
+            @Override
+            public void onError(String error) {
+                post(cb, null, error);
+            }
+        });
+    }
+
+    private List<UploadItem> fetchReleaseAssets(GitHubConfig cfg) throws Exception {
+        HttpUrl url = new HttpUrl.Builder()
+                .scheme("https")
+                .host("api.github.com")
+                .addPathSegments("repos/" + cfg.owner + "/" + cfg.repo + "/releases")
+                .addQueryParameter("per_page", "100")
+                .build();
+
+        Request req = auth(cfg).url(url).get().build();
+        try (Response resp = http.newCall(req).execute()) {
+            if (resp.code() == 401) {
+                throw new ApiException("Неверный токен или нет доступа (HTTP 401)");
+            }
+            if (resp.code() == 404) {
+                throw new ApiException("Репозиторий не найден или нет прав доступа (HTTP 404)");
+            }
+            if (!resp.isSuccessful()) {
+                throw new ApiException("Ошибка GitHub API: HTTP " + resp.code());
+            }
+            String body = readBody(resp);
+            JsonElement parsed = JsonParser.parseString(body);
+            List<UploadItem> result = new ArrayList<>();
+            if (!parsed.isJsonArray()) {
+                return result;
+            }
+            JsonArray arr = parsed.getAsJsonArray();
+            for (JsonElement relEl : arr) {
+                if (!relEl.isJsonObject()) continue;
+                JsonObject rel = relEl.getAsJsonObject();
+                long releaseId = rel.has("id") ? rel.get("id").getAsLong() : 0L;
+                String tag = str(rel, "tag_name");
+                String relPublished = str(rel, "published_at");
+                String relCreated = str(rel, "created_at");
+
+                if (!rel.has("assets") || !rel.get("assets").isJsonArray()) {
+                    continue;
+                }
+                JsonArray assets = rel.getAsJsonArray("assets");
+                for (JsonElement assetEl : assets) {
+                    if (!assetEl.isJsonObject()) continue;
+                    JsonObject asset = assetEl.getAsJsonObject();
+                    String dlUrl = str(asset, "browser_download_url");
+                    if (dlUrl.isEmpty()) continue;
+
+                    String assetName = str(asset, "name");
+                    long assetId = asset.has("id") ? asset.get("id").getAsLong() : 0L;
+                    long size = asset.has("size") ? asset.get("size").getAsLong() : 0L;
+                    String contentType = str(asset, "content_type");
+                    long timestamp = parseIsoTime(
+                            str(asset, "updated_at"),
+                            str(asset, "created_at"),
+                            relPublished,
+                            relCreated);
+
+                    UploadItem it = new UploadItem();
+                    it.owner = cfg.owner;
+                    it.repo = cfg.repo;
+                    it.previewBranch = cfg.previewBranch;
+                    it.name = assetName.isEmpty() ? "file" : assetName;
+                    it.size = size;
+                    it.mime = resolveMime(it.name, contentType);
+                    it.tag = tag;
+                    it.time = timestamp;
+                    it.downloadUrl = dlUrl;
+                    it.releaseId = releaseId;
+                    it.releaseAssetId = assetId;
+                    it.releaseAssetName = assetName;
+                    it.mode = "download";
+                    result.add(it);
+                }
+            }
+            return result;
+        }
+    }
+
+    private List<UploadItem> fetchPreviewBranchFiles(GitHubConfig cfg) throws Exception {
+        String branch = (cfg.previewBranch == null || cfg.previewBranch.trim().isEmpty())
+                ? "files" : cfg.previewBranch.trim();
+
+        HttpUrl url = new HttpUrl.Builder()
+                .scheme("https")
+                .host("api.github.com")
+                .addPathSegments("repos/" + cfg.owner + "/" + cfg.repo + "/contents/files")
+                .addQueryParameter("ref", branch)
+                .build();
+
+        Request req = auth(cfg).url(url).get().build();
+        List<UploadItem> result = new ArrayList<>();
+        try (Response resp = http.newCall(req).execute()) {
+            if (resp.code() == 404) {
+                // Ветка files или папка files/ ещё не создана — это нормально
+                return result;
+            }
+            if (!resp.isSuccessful()) {
+                return result;
+            }
+            String body = readBody(resp);
+            JsonElement parsed = JsonParser.parseString(body);
+            if (!parsed.isJsonArray()) {
+                return result;
+            }
+            JsonArray arr = parsed.getAsJsonArray();
+            for (JsonElement el : arr) {
+                if (!el.isJsonObject()) continue;
+                JsonObject f = el.getAsJsonObject();
+                if (!"file".equalsIgnoreCase(str(f, "type"))) {
+                    continue;
+                }
+                String rawName = str(f, "name");
+                String path = str(f, "path");
+                if (path.isEmpty()) continue;
+
+                String displayName = FileUtils.stripTimestampPrefix(rawName);
+                long stampTime = FileUtils.parseTimestampPrefix(rawName);
+                long size = f.has("size") ? f.get("size").getAsLong() : 0L;
+                String sha = str(f, "sha");
+
+                String enc = FileUtils.encodePath(path);
+                UploadItem it = new UploadItem();
+                it.owner = cfg.owner;
+                it.repo = cfg.repo;
+                it.previewBranch = branch;
+                it.name = displayName.isEmpty() ? rawName : displayName;
+                it.size = size;
+                it.mime = resolveMime(it.name, null);
+                it.time = stampTime;
+                it.previewPath = path;
+                it.repoFileSha = sha;
+                it.previewUrl = "https://cdn.jsdelivr.net/gh/" + cfg.owner + "/" + cfg.repo
+                        + "@" + branch + "/" + enc;
+                it.previewRawUrl = "https://raw.githubusercontent.com/" + cfg.owner + "/" + cfg.repo
+                        + "/" + branch + "/" + enc;
+                it.pageUrl = "https://github.com/" + cfg.owner + "/" + cfg.repo
+                        + "/blob/" + branch + "/" + enc;
+                it.mode = "preview";
+                result.add(it);
+            }
+        }
+        return result;
+    }
+
+    private static List<UploadItem> mergeOnlineAndLocal(
+            GitHubConfig cfg,
+            List<UploadItem> releaseItems,
+            List<UploadItem> previewItems,
+            List<UploadItem> localCache) {
+
+        boolean[] usedPreview = new boolean[previewItems.size()];
+        List<UploadItem> combined = new ArrayList<>();
+
+        // 1) Склеиваем пары (Release + Preview), относящиеся к одной загрузке "Оба варианта"
+        for (UploadItem rel : releaseItems) {
+            int matchedIdx = -1;
+
+            // Сначала проверяем точное совпадение в локальном кэше
+            for (UploadItem loc : localCache) {
+                if (loc != null && loc.hasDownload() && loc.hasPreview()
+                        && rel.downloadUrl.equals(loc.downloadUrl)) {
+                    for (int i = 0; i < previewItems.size(); i++) {
+                        if (usedPreview[i]) continue;
+                        UploadItem p = previewItems.get(i);
+                        if ((loc.previewPath != null && loc.previewPath.equals(p.previewPath))
+                                || loc.bestPreviewUrl().equals(p.bestPreviewUrl())) {
+                            matchedIdx = i;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            // Если кэша нет (свежая установка приложения) — сопоставляем по имени и размеру
+            if (matchedIdx < 0) {
+                String relClean = FileUtils.sanitize(rel.name);
+                for (int i = 0; i < previewItems.size(); i++) {
+                    if (usedPreview[i]) continue;
+                    UploadItem p = previewItems.get(i);
+                    String prevClean = FileUtils.sanitize(p.name);
+                    boolean sameNameAndSize = relClean.equalsIgnoreCase(prevClean)
+                            && rel.size > 0 && rel.size == p.size;
+                    boolean closeTime = (rel.time <= 0 || p.time <= 0)
+                            || Math.abs(rel.time - p.time) <= 15L * 60L * 1000L;
+                    if (sameNameAndSize && closeTime) {
+                        matchedIdx = i;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedIdx >= 0) {
+                usedPreview[matchedIdx] = true;
+                UploadItem p = previewItems.get(matchedIdx);
+                rel.previewUrl = p.previewUrl;
+                rel.previewRawUrl = p.previewRawUrl;
+                rel.pageUrl = p.pageUrl;
+                rel.previewPath = p.previewPath;
+                rel.previewBranch = p.previewBranch;
+                rel.repoFileSha = p.repoFileSha;
+                if (rel.time <= 0 && p.time > 0) {
+                    rel.time = p.time;
+                }
+                rel.mode = "both";
+            }
+            combined.add(rel);
+        }
+
+        // 2) Добавляем все оставшиеся файлы из ветки предпросмотра (фото, видео и др.)
+        for (int i = 0; i < previewItems.size(); i++) {
+            if (!usedPreview[i]) {
+                combined.add(previewItems.get(i));
+            }
+        }
+
+        // 3) Обогащаем локальными данными (sourceUri, id, точное время если у файла не было штампа)
+        long seqId = System.currentTimeMillis();
+        for (UploadItem item : combined) {
+            for (UploadItem loc : localCache) {
+                if (loc != null && item.sameEntry(loc)) {
+                    if (loc.sourceUri != null && !loc.sourceUri.isEmpty()) {
+                        item.sourceUri = loc.sourceUri;
+                    }
+                    if (item.time <= 0 && loc.time > 0) {
+                        item.time = loc.time;
+                    }
+                    if (loc.id > 0) {
+                        item.id = loc.id;
+                    }
+                    break;
+                }
+            }
+            if (item.id == 0) {
+                String key = cfg.owner + "/" + cfg.repo + "|" + item.downloadUrl + "|" + item.previewPath;
+                item.id = Math.abs((long) key.hashCode()) + (++seqId % 100000L);
+            }
+        }
+
+        // 4) Сортируем по дате (новые сверху)
+        Collections.sort(combined, (a, b) -> {
+            int cmp = Long.compare(b.time, a.time);
+            if (cmp != 0) return cmp;
+            return b.name.compareToIgnoreCase(a.name);
+        });
+
+        return combined;
+    }
+
+    private static String resolveMime(String fileName, String apiContentType) {
+        if (apiContentType != null && !apiContentType.isEmpty()
+                && !"application/octet-stream".equalsIgnoreCase(apiContentType)
+                && !"binary/octet-stream".equalsIgnoreCase(apiContentType)) {
+            return apiContentType;
+        }
+        String byName = FileUtils.mimeFromName(fileName);
+        return (byName != null && !byName.isEmpty()) ? byName : "application/octet-stream";
+    }
+
+    private static long parseIsoTime(String... candidates) {
+        if (candidates == null) {
+            return 0L;
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        for (String c : candidates) {
+            if (c == null || c.isEmpty()) continue;
+            try {
+                Date d = sdf.parse(c);
+                if (d != null) {
+                    return d.getTime();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return 0L;
+    }
+
+    private Request.Builder auth(GitHubConfig cfg) {
+        return new Request.Builder()
+                .header("Authorization", "token " + cfg.token)
+                .header("Accept", "application/vnd.github.v3+json")
+                .header("User-Agent", "GitHubUploader/2.1");
+    }
+
+    private static String str(JsonObject o, String key) {
+        if (o == null || !o.has(key) || o.get(key).isJsonNull()) {
+            return "";
+        }
+        return o.get(key).getAsString();
+    }
+
+    private static String readBody(Response response) {
+        try {
+            ResponseBody b = response.body();
+            return b == null ? "" : b.string();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private <T> void post(Callback<T> cb, T result, String error) {
+        ui.post(() -> {
+            if (error != null) {
+                cb.onError(error);
+            } else {
+                cb.onSuccess(result);
+            }
+        });
+    }
+
+    private static final class ApiException extends Exception {
+        ApiException(String message) {
+            super(message);
+        }
+    }
+}

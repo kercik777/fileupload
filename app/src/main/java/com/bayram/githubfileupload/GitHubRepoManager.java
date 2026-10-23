@@ -4,7 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Base64;
 
-import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -21,13 +21,8 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 /**
- * Класс, который делает файл доступным для просмотра в браузере.
- *
- * <p>GitHub Releases всегда отдают файл с Content-Disposition: attachment, поэтому
- * браузер скачивает его, а не показывает. Чтобы файл можно было видеть в браузере, мы
- * записываем его в сам репозиторий (на отдельный бранч) — и тогда работают прямые ссылки
- * raw.githubusercontent.com и CDN jsDelivr. Они отдают файл с правильным Content-Type
- * и без заголовка «скачивать», поэтому фото и видео открываются прямо в браузере.</p>
+ * Запись и удаление файлов в ветке репозитория для прямого просмотра в браузере
+ * (jsDelivr CDN и raw.githubusercontent.com).
  */
 public class GitHubRepoManager {
 
@@ -36,7 +31,6 @@ public class GitHubRepoManager {
     private static final long MAX_FILE_BYTES = 90L * 1024 * 1024;
 
     private final OkHttpClient http;
-    private final Gson gson;
     private final Handler ui;
 
     public interface Callback<T> {
@@ -50,6 +44,7 @@ public class GitHubRepoManager {
         public String pageUrl = "";
         public String commitUrl = "";
         public String path = "";
+        public String sha = "";
         public String owner = "";
         public String repo = "";
         public String branch = "";
@@ -69,7 +64,6 @@ public class GitHubRepoManager {
                 .readTimeout(5, TimeUnit.MINUTES)
                 .writeTimeout(15, TimeUnit.MINUTES)
                 .build();
-        gson = new Gson();
         ui = new Handler(Looper.getMainLooper());
     }
 
@@ -152,6 +146,153 @@ public class GitHubRepoManager {
                 post(cb, null, e.getMessage());
             }
         });
+    }
+
+    /**
+     * Удалить файл из ветки репозитория (для любых фото, видео и прочих файлов предпросмотра).
+     */
+    public void deleteFile(GitHubConfig cfg, String branch, String relativePath, String knownSha,
+                           Callback<Boolean> cb) {
+        String cleanPath = relativePath == null ? "" : relativePath.trim();
+        while (cleanPath.startsWith("/")) {
+            cleanPath = cleanPath.substring(1);
+        }
+        if (cleanPath.isEmpty()) {
+            post(cb, true, null);
+            return;
+        }
+        final String targetPath = cleanPath;
+        final String targetBranch = (branch == null || branch.trim().isEmpty())
+                ? ((cfg.previewBranch == null || cfg.previewBranch.trim().isEmpty())
+                ? "files" : cfg.previewBranch.trim())
+                : branch.trim();
+
+        if (knownSha != null && !knownSha.trim().isEmpty()) {
+            deleteFileWithSha(cfg, targetBranch, targetPath, knownSha.trim(), true, cb);
+        } else {
+            fetchShaAndDelete(cfg, targetBranch, targetPath, cb);
+        }
+    }
+
+    private void fetchShaAndDelete(GitHubConfig cfg, String branch, String path, Callback<Boolean> cb) {
+        HttpUrl url = api(cfg, "contents/" + path).newBuilder()
+                .addQueryParameter("ref", branch)
+                .build();
+        Request req = auth(cfg).url(url).get().build();
+
+        http.newCall(req).enqueue(new okhttp3.Callback() {
+            @Override
+            public void onResponse(okhttp3.Call call, Response response) throws IOException {
+                try {
+                    if (response.code() == 404) {
+                        post(cb, true, null);
+                        return;
+                    }
+                    if (!response.isSuccessful()) {
+                        post(cb, null, "Ошибка чтения файла в репозитории: HTTP " + response.code());
+                        return;
+                    }
+                    JsonElement parsed = JsonParser.parseString(readBody(response));
+                    if (!parsed.isJsonObject()) {
+                        post(cb, null, "Указанный путь не является файлом");
+                        return;
+                    }
+                    String sha = str(parsed.getAsJsonObject(), "sha");
+                    if (sha.isEmpty()) {
+                        post(cb, true, null);
+                        return;
+                    }
+                    deleteFileWithSha(cfg, branch, path, sha, false, cb);
+                } finally {
+                    response.close();
+                }
+            }
+
+            @Override
+            public void onFailure(okhttp3.Call call, IOException e) {
+                post(cb, null, e.getMessage());
+            }
+        });
+    }
+
+    private void deleteFileWithSha(GitHubConfig cfg, String branch, String path, String sha,
+                                   boolean retryOnConflict, Callback<Boolean> cb) {
+        HttpUrl url = api(cfg, "contents/" + path);
+        JsonObject body = new JsonObject();
+        body.addProperty("message", "Delete: " + path);
+        body.addProperty("sha", sha);
+        body.addProperty("branch", branch);
+
+        Request req = auth(cfg)
+                .url(url)
+                .delete(RequestBody.create(JSON_MT, body.toString()))
+                .build();
+
+        http.newCall(req).enqueue(new okhttp3.Callback() {
+            @Override
+            public void onResponse(okhttp3.Call call, Response response) throws IOException {
+                try {
+                    if (response.isSuccessful() || response.code() == 404) {
+                        post(cb, true, null);
+                    } else if ((response.code() == 409 || response.code() == 422) && retryOnConflict) {
+                        fetchShaAndDelete(cfg, branch, path, cb);
+                    } else {
+                        post(cb, null, "Ошибка удаления файла из репозитория: HTTP " + response.code());
+                    }
+                } finally {
+                    response.close();
+                }
+            }
+
+            @Override
+            public void onFailure(okhttp3.Call call, IOException e) {
+                post(cb, null, e.getMessage());
+            }
+        });
+    }
+
+    /** Извлекает относительный путь файла в репозитории из CDN / raw ссылки, если previewPath пуст. */
+    public static String extractRepoPathFromItem(UploadItem item) {
+        if (item == null) {
+            return "";
+        }
+        if (item.previewPath != null && !item.previewPath.trim().isEmpty()) {
+            return item.previewPath.trim();
+        }
+        String cdn = item.previewUrl == null ? "" : item.previewUrl;
+        if (!cdn.isEmpty()) {
+            // https://cdn.jsdelivr.net/gh/<owner>/<repo>@<branch>/<path>
+            int at = cdn.indexOf('@');
+            if (at > 0) {
+                int slash = cdn.indexOf('/', at);
+                if (slash > 0 && slash < cdn.length() - 1) {
+                    return decodePath(cdn.substring(slash + 1));
+                }
+            }
+        }
+        String raw = item.previewRawUrl == null ? "" : item.previewRawUrl;
+        if (!raw.isEmpty()) {
+            // https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>
+            String prefix = "https://raw.githubusercontent.com/";
+            if (raw.startsWith(prefix)) {
+                String rest = raw.substring(prefix.length());
+                String[] parts = rest.split("/", 4);
+                if (parts.length == 4) {
+                    return decodePath(parts[3]);
+                }
+            }
+        }
+        return "";
+    }
+
+    private static String decodePath(String encodedPath) {
+        String[] segs = encodedPath.split("/");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < segs.length; i++) {
+            if (i > 0) sb.append('/');
+            sb.append(FileUtils.decodeUrlSegment(segs[i]));
+        }
+        return sb.toString();
     }
 
     private void ensureBranch(GitHubConfig cfg, String defaultBranch, String relativePath,
@@ -277,15 +418,21 @@ public class GitHubRepoManager {
                 try {
                     if (response.isSuccessful()) {
                         String commitUrl = "";
+                        String fileSha = "";
                         try {
                             JsonObject obj = JsonParser.parseString(readBody(response)).getAsJsonObject();
                             JsonObject commit = obj.has("commit") ? obj.getAsJsonObject("commit") : null;
                             if (commit != null && commit.has("html_url")) {
                                 commitUrl = commit.get("html_url").getAsString();
                             }
+                            JsonObject contentObj = obj.has("content") && obj.get("content").isJsonObject()
+                                    ? obj.getAsJsonObject("content") : null;
+                            if (contentObj != null && contentObj.has("sha")) {
+                                fileSha = str(contentObj, "sha");
+                            }
                         } catch (Exception ignored) {
                         }
-                        post(cb, buildResult(cfg, branch, relativePath, commitUrl), null);
+                        post(cb, buildResult(cfg, branch, relativePath, commitUrl, fileSha), null);
                     } else {
                         post(cb, null, "Не удалось записать файл в репозиторий: HTTP "
                                 + response.code() + " — " + readBody(response));
@@ -302,12 +449,14 @@ public class GitHubRepoManager {
         });
     }
 
-    private PreviewResult buildResult(GitHubConfig cfg, String branch, String path, String commitUrl) {
+    private PreviewResult buildResult(GitHubConfig cfg, String branch, String path,
+                                      String commitUrl, String sha) {
         PreviewResult r = new PreviewResult();
         r.owner = cfg.owner;
         r.repo = cfg.repo;
         r.branch = branch;
         r.path = path;
+        r.sha = sha == null ? "" : sha;
         String enc = FileUtils.encodePath(path);
         r.rawUrl = "https://raw.githubusercontent.com/" + cfg.owner + "/" + cfg.repo
                 + "/" + branch + "/" + enc;
@@ -354,7 +503,7 @@ public class GitHubRepoManager {
         return new Request.Builder()
                 .header("Authorization", "token " + cfg.token)
                 .header("Accept", "application/vnd.github.v3+json")
-                .header("User-Agent", "GitHubUploader/2.0");
+                .header("User-Agent", "GitHubUploader/2.1");
     }
 
     private static String str(JsonObject o, String key) {

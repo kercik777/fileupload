@@ -27,6 +27,14 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
+        <ProgressBar
+            android:id="@+id/progressSync"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler"
             android:layout_width="match_parent"
@@ -35,16 +43,45 @@
             android:padding="16dp"
             android:scrollbars="none" />
 
-        <TextView
-            android:id="@+id/tvEmpty"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/emptyBox"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:gravity="center"
+            android:orientation="vertical"
             android:padding="32dp"
-            android:text="@string/history_empty"
-            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-            android:textColor="@color/md_on_surface_variant"
-            android:visibility="gone" />
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:alpha="0.7"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_history"
+                app:tint="@color/md_primary" />
+
+            <TextView
+                android:id="@+id/tvEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:text="@string/history_empty"
+                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                android:textColor="@color/md_on_surface_variant" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOpenSettings"
+                style="@style/Widget.GitHubUploader.Button.Tonal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/history_open_settings"
+                android:visibility="gone"
+                app:icon="@drawable/ic_settings"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp" />
+        </LinearLayout>
     </FrameLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

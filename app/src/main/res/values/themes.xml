@@ -32,7 +32,7 @@
         <item name="colorOutline">@color/md_outline</item>
         <item name="colorOutlineVariant">@color/md_outline_variant</item>
 
-        <!-- Прозрачные системные панели: dibujo приложения уходит под статус-бар
+        <!-- Прозрачные системные панели: рисунок приложения уходит под статус-бар
              и под панель навигации. -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
@@ -71,12 +71,19 @@
         <item name="cornerRadius">20dp</item>
     </style>
 
-    <!-- Кнопки в ряд: отключаем капс, ограничиваем одной строкой, убираем часть
-         внутренних отступов Material3, чтобы текст не обрезалось на узких экранах. -->
     <style name="Widget.GitHubUploader.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
         <item name="android:textAllCaps">false</item>
         <item name="android:maxLines">1</item>
         <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="Widget.GitHubUploader.Button.Danger" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="backgroundTint">@color/md_error_container</item>
+        <item name="android:textColor">@color/md_on_error_container</item>
+        <item name="iconTint">@color/md_error</item>
     </style>
 
     <style name="Widget.GitHubUploader.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
@@ -91,15 +98,14 @@
         <item name="android:ellipsize">end</item>
     </style>
 
-    <!-- Якорь-стиль без точек в имени: у стилей вида A.B без parent аапт2
+    <!-- Якорь-стиль без точек в имени: у стилей вида A.B без parent aapt2
          подставляет неявного родителя A, поэтому для карточек родитель
          указывается явно, а якорь не создаёт цепочки. -->
     <style name="GitHubUploaderCardBase" />
 
     <!-- Карты — обычные ViewGroup с градиентным фоном. MaterialCardView
          намеренно не используется: его state-list animator ссылается на
-         атрибуты темы, которые не обязаны резолвиться в любой билд-системе
-         (иначе краш NumberFormatException: "?2130903938"). -->
+         атрибуты темы, которые не обязаны резолвиться в любой билд-системе. -->
     <style name="Widget.GitHubUploader.Card" parent="GitHubUploaderCardBase">
         <item name="android:background">@drawable/bg_card_surface</item>
         <item name="android:padding">16dp</item>

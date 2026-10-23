@@ -12,6 +12,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Header: thumbnail/icon + title + meta + mode badge -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -19,15 +20,16 @@
             android:orientation="horizontal">
 
             <FrameLayout
-                android:layout_width="52dp"
-                android:layout_height="52dp">
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:background="@drawable/bg_thumb">
 
                 <ImageView
                     android:id="@+id/itemIcon"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:contentDescription="@null"
-                    android:padding="10dp"
+                    android:padding="12dp"
                     android:src="@drawable/ic_insert_drive_file"
                     app:tint="@color/md_primary" />
 
@@ -64,17 +66,26 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="@color/md_on_surface_variant"
-                    tools:text="1.2 МБ · скачивание" />
-            </LinearLayout>
+                    tools:text="1.2 МБ · 23.10.2026 16:40" />
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_clock"
-                app:tint="@color/md_on_surface_variant" />
+                <TextView
+                    android:id="@+id/itemBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_thumb"
+                    android:paddingStart="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="2dp"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                    android:textColor="@color/md_primary"
+                    tools:text="Просмотр" />
+            </LinearLayout>
         </LinearLayout>
 
         <View
@@ -83,66 +94,192 @@
             android:layout_marginTop="12dp"
             android:background="@color/md_surface_container_high" />
 
+        <!-- Download link block (visible when item.hasDownload()) -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/itemCopyDownload"
-                android:contentDescription="@string/a11y_copy_download"
-                style="@style/Widget.GitHubUploader.Button.Tonal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                app:icon="@drawable/ic_content_copy"
-                app:iconPadding="4dp"
-                app:iconSize="16dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/itemCopyPreview"
-                android:contentDescription="@string/a11y_copy_preview"
-                style="@style/Widget.GitHubUploader.Button.Tonal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                app:icon="@drawable/ic_link"
-                app:iconPadding="4dp"
-                app:iconSize="16dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/itemDelete"
-                style="@style/Widget.GitHubUploader.Button.Tonal"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/delete_release"
-                app:icon="@drawable/ic_trash"
-                app:iconPadding="4dp"
-                app:iconSize="16dp"
-                app:iconTint="@color/md_on_error" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/itemDownloadUrl"
+            android:id="@+id/downloadRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:fontFamily="monospace"
-            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-            android:textColor="@color/md_on_surface_variant"
-            tools:text="https://github.com/…/releases/download/…" />
+            android:background="@drawable/bg_thumb"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="10dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp">
 
-        <TextView
-            android:id="@+id/itemPreviewUrl"
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_download"
+                app:tint="@color/md_primary" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/download_url_label"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                    android:textColor="@color/md_primary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/itemDownloadUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="middle"
+                    android:fontFamily="monospace"
+                    android:singleLine="true"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="@color/md_on_surface_variant"
+                    tools:text="https://github.com/…/releases/download/…" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/itemCopyDownload"
+                style="@style/Widget.GitHubUploader.Button.Tonal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="38dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/copy"
+                android:textSize="12sp"
+                app:icon="@drawable/ic_content_copy"
+                app:iconGravity="textStart"
+                app:iconPadding="5dp"
+                app:iconSize="16dp" />
+        </LinearLayout>
+
+        <!-- Preview link block (visible when item.hasPreview()) -->
+        <LinearLayout
+            android:id="@+id/previewRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:fontFamily="monospace"
-            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-            android:textColor="@color/md_on_surface_variant"
-            tools:text="https://cdn.jsdelivr.net/gh/…@files/…" />
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_thumb"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="10dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_eye"
+                app:tint="@color/md_tertiary" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/preview_url_label"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                    android:textColor="@color/md_tertiary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/itemPreviewUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="middle"
+                    android:fontFamily="monospace"
+                    android:singleLine="true"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="@color/md_on_surface_variant"
+                    tools:text="https://cdn.jsdelivr.net/gh/…@files/…" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/itemCopyPreview"
+                style="@style/Widget.GitHubUploader.Button.Tonal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="38dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/copy"
+                android:textSize="12sp"
+                app:icon="@drawable/ic_content_copy"
+                app:iconGravity="textStart"
+                app:iconPadding="5dp"
+                app:iconSize="16dp" />
+        </LinearLayout>
+
+        <!-- Bottom actions: Open + Share + Delete (works for ANY file!) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/itemOpen"
+                style="@style/Widget.GitHubUploader.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="@string/open"
+                android:textSize="13sp"
+                app:icon="@drawable/ic_open_in_new"
+                app:iconGravity="textStart"
+                app:iconPadding="6dp"
+                app:iconSize="17dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/itemShare"
+                style="@style/Widget.GitHubUploader.Button.Outlined"
+                android:layout_width="46dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:contentDescription="@string/share"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                app:icon="@drawable/ic_share"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="18dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/itemDelete"
+                style="@style/Widget.GitHubUploader.Button.Danger"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="@string/delete_release"
+                android:textSize="13sp"
+                app:icon="@drawable/ic_trash"
+                app:iconGravity="textStart"
+                app:iconPadding="6dp"
+                app:iconSize="17dp" />
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

@@ -12,7 +12,7 @@
     <string name="hero_title">GitHub Uploader</string>
     <string name="hero_subtitle">Загружайте файлы и получайте рабочие ссылки</string>
     <string name="select_file">Выбрать файл</string>
-    <string name="select_file_hint">Фото, видео или любой другой файл</string>
+    <string name="select_file_hint">Фотография, видео или любой файл</string>
     <string name="file_not_selected">Файл не выбран</string>
     <string name="change_file">Изменить</string>
     <string name="tag_label">Тег релиза</string>
@@ -26,6 +26,7 @@
     <string name="status_failed">Ошибка загрузки</string>
     <string name="cancel">Отмена</string>
     <string name="copy">Копировать</string>
+    <string name="copy_link">Скопировать ссылку</string>
     <string name="open">Открыть</string>
     <string name="share">Поделиться</string>
     <string name="history">История</string>
@@ -40,8 +41,15 @@
     <string name="menu_history">История</string>
     <string name="menu_settings">Настройки</string>
     <string name="about_text">GitHub Uploader — загружает файлы в релиз GitHub и даёт две ссылки: для скачивания и для просмотра прямо в браузере.</string>
-    <string name="version_label">Версия 2.0</string>
+    <string name="version_label">Версия 2.1</string>
     <string name="made_with">Сделано с ❤ в Zürich</string>
+
+    <!-- File format picker dialog -->
+    <string name="format_dialog_title">Выберите формат</string>
+    <string name="format_dialog_subtitle">Какой тип файла хотите выбрать?</string>
+    <string name="format_photo">Фотография</string>
+    <string name="format_video">Видео</string>
+    <string name="format_file">Файл</string>
 
     <!-- Upload choice dialog -->
     <string name="dialog_title_purpose">Для чего загружаете файл?</string>
@@ -75,10 +83,18 @@
     <string name="config_hint_token">Для работы нужен токен с правом repo (или public_repo для публичных репозиториев). Токен хранится только на устройстве.</string>
     <string name="config_hint_preview">Файлы для просмотра уходят на отдельный бранч репозитория, оттуда работают прямые ссылки raw и CDN jsDelivr.</string>
 
-    <!-- History -->
-    <string name="history_empty">Пока нет загрузок</string>
-    <string name="history_clear">Очистить историю</string>
-    <string name="history_deleted">Запись удалена</string>
+    <!-- History (Online + Offline cache) -->
+    <string name="history_empty">В репозитории пока нет загруженных файлов</string>
+    <string name="history_loading">Загрузка истории из GitHub…</string>
+    <string name="history_need_config">Укажите владельца, репозиторий и токен в настройках, чтобы загрузить все ваши файлы из GitHub</string>
+    <string name="history_open_settings">Открыть настройки</string>
+    <string name="history_refresh">Обновить</string>
+    <string name="history_clear">Очистить локальный кэш</string>
+    <string name="history_deleted">Файл удалён</string>
+    <string name="history_cache_cleared">Локальный кэш очищен</string>
+    <string name="history_deleting">Удаление файла…</string>
+    <string name="history_delete_title">Удалить файл?</string>
+    <string name="history_delete_message">Файл «%1$s» будет удалён из GitHub и из истории.</string>
     <string name="history_loaded_at">Загружено: %1$s</string>
 
     <!-- Preview -->
@@ -98,7 +114,7 @@
 
     <string name="upload_mode_download">Скачивание</string>
     <string name="upload_mode_preview">Просмотр</string>
-    <string name="upload_mode_both">Оба</string>
+    <string name="upload_mode_both">Скачивание + Просмотр</string>
     <string name="download_url_label">Ссылка для скачивания</string>
     <string name="preview_url_label">Ссылка для просмотра</string>
     <string name="asset_url_label">Актив</string>
