@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card_surface"
+    android:orientation="vertical"
+    android:padding="22dp">
+
+    <LinearLayout
+        android:id="@+id/sizeWarnBadge"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_warning_circle"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/ivSizeWarnIcon"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_info"
+            app:tint="@color/md_tertiary" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvSizeWarnTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+        android:textColor="@color/md_on_surface"
+        android:textStyle="bold"
+        tools:text="Слишком большой для ветки просмотра" />
+
+    <TextView
+        android:id="@+id/tvSizeWarnMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:textColor="@color/md_on_surface_variant"
+        tools:text="Файл весит 150 МБ..." />
+
+    <Button
+        android:id="@+id/btnSizeDownloadOnly"
+        style="@style/Widget.GitHubUploader.GradientButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:text="@string/size_warn_btn_download_only" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSizeContinueAnyway"
+        style="@style/Widget.GitHubUploader.Button.Tonal"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/size_warn_btn_continue"
+        android:visibility="gone" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSizeCancel"
+        style="@style/Widget.GitHubUploader.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/cancel" />
+</LinearLayout>

@@ -187,67 +187,89 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <FrameLayout
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:background="@drawable/bg_thumb">
-
-                        <ImageView
-                            android:id="@+id/ivOAuthAvatar"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:background="@drawable/bg_thumb"
-                            android:contentDescription="@null"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/ic_account" />
-                    </FrameLayout>
+                    android:orientation="vertical">
 
                     <LinearLayout
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
-                        <TextView
-                            android:id="@+id/tvOAuthLogin"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:ellipsize="end"
-                            android:singleLine="true"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                            android:textColor="@color/md_on_surface"
-                            android:textStyle="bold"
-                            tools:text="@gitstorage1247" />
+                        <FrameLayout
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:background="@drawable/bg_thumb">
 
-                        <TextView
-                            android:id="@+id/tvOAuthSub"
-                            android:layout_width="match_parent"
+                            <ImageView
+                                android:id="@+id/ivOAuthAvatar"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/bg_thumb"
+                                android:contentDescription="@null"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/ic_account" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:ellipsize="end"
-                            android:singleLine="true"
-                            android:text="@string/oauth_logged_in_badge"
-                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                            android:textColor="@color/md_primary" />
+                            android:layout_marginStart="12dp"
+                            android:layout_marginEnd="8dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvOAuthLogin"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:singleLine="true"
+                                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                android:textColor="@color/md_on_surface"
+                                android:textStyle="bold"
+                                tools:text="@gitstorage1247" />
+
+                            <TextView
+                                android:id="@+id/tvOAuthSub"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:ellipsize="end"
+                                android:singleLine="true"
+                                android:text="@string/oauth_logged_in_badge"
+                                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                                android:textColor="@color/md_primary" />
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnOAuthLogout"
+                            style="@style/Widget.GitHubUploader.Button.Outlined"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="@string/oauth_logout"
+                            app:icon="@drawable/ic_logout"
+                            app:iconGravity="textStart"
+                            app:iconPadding="6dp"
+                            app:iconSize="16dp" />
                     </LinearLayout>
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnOAuthLogout"
-                        style="@style/Widget.GitHubUploader.Button.Outlined"
-                        android:layout_width="wrap_content"
-                        android:layout_height="40dp"
+                        android:id="@+id/btnOAuthActiveBranch"
+                        style="@style/Widget.GitHubUploader.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="42dp"
+                        android:layout_marginTop="12dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
-                        android:text="@string/oauth_logout"
-                        app:icon="@drawable/ic_logout"
-                        app:iconGravity="textStart"
+                        android:visibility="gone"
+                        app:icon="@drawable/ic_arrow_drop_down"
+                        app:iconGravity="end"
                         app:iconPadding="6dp"
-                        app:iconSize="16dp" />
+                        app:iconSize="20dp"
+                        tools:text="Ветка загрузки: main"
+                        tools:visibility="visible" />
                 </LinearLayout>
             </FrameLayout>
 

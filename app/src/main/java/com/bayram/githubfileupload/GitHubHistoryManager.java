@@ -323,68 +323,114 @@ public class GitHubHistoryManager {
     }
 
     private List<UploadItem> fetchPreviewBranchFiles(GitHubConfig cfg) throws Exception {
-        String branch = (cfg.previewBranch == null || cfg.previewBranch.trim().isEmpty())
+        String activeBranch = (cfg.previewBranch == null || cfg.previewBranch.trim().isEmpty())
                 ? "files" : cfg.previewBranch.trim();
 
-        HttpUrl url = new HttpUrl.Builder()
+        // Сначала проверяем текущую активную ветку, затем остальные ветки репозитория
+        List<String> branchesToScan = new ArrayList<>();
+        branchesToScan.add(activeBranch);
+        addUniqueBranch(branchesToScan, cfg.branch);
+        addUniqueBranch(branchesToScan, "files");
+
+        HttpUrl brListUrl = new HttpUrl.Builder()
                 .scheme("https")
                 .host("api.github.com")
-                .addPathSegments("repos/" + cfg.owner + "/" + cfg.repo + "/contents/files")
-                .addQueryParameter("ref", branch)
+                .addPathSegments("repos/" + cfg.owner + "/" + cfg.repo + "/branches")
+                .addQueryParameter("per_page", "25")
                 .build();
+        try (Response brResp = http.newCall(auth(cfg).url(brListUrl).get().build()).execute()) {
+            if (brResp.isSuccessful()) {
+                JsonElement el = JsonParser.parseString(readBody(brResp));
+                if (el.isJsonArray()) {
+                    for (JsonElement bEl : el.getAsJsonArray()) {
+                        if (bEl.isJsonObject()) {
+                            addUniqueBranch(branchesToScan, str(bEl.getAsJsonObject(), "name"));
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
 
-        Request req = auth(cfg).url(url).get().build();
         List<UploadItem> result = new ArrayList<>();
-        try (Response resp = http.newCall(req).execute()) {
-            if (resp.code() == 404) {
-                return result;
-            }
-            if (!resp.isSuccessful()) {
-                return result;
-            }
-            String body = readBody(resp);
-            JsonElement parsed = JsonParser.parseString(body);
-            if (!parsed.isJsonArray()) {
-                return result;
-            }
-            JsonArray arr = parsed.getAsJsonArray();
-            for (JsonElement el : arr) {
-                if (!el.isJsonObject()) continue;
-                JsonObject f = el.getAsJsonObject();
-                if (!"file".equalsIgnoreCase(str(f, "type"))) {
+        java.util.Set<String> seenPathSha = new java.util.HashSet<>();
+
+        for (int bIdx = 0; bIdx < branchesToScan.size() && bIdx < 15; bIdx++) {
+            String branch = branchesToScan.get(bIdx);
+            HttpUrl url = new HttpUrl.Builder()
+                    .scheme("https")
+                    .host("api.github.com")
+                    .addPathSegments("repos/" + cfg.owner + "/" + cfg.repo + "/contents/files")
+                    .addQueryParameter("ref", branch)
+                    .build();
+
+            Request req = auth(cfg).url(url).get().build();
+            try (Response resp = http.newCall(req).execute()) {
+                if (!resp.isSuccessful()) {
                     continue;
                 }
-                String rawName = str(f, "name");
-                String path = str(f, "path");
-                if (path.isEmpty()) continue;
+                String body = readBody(resp);
+                JsonElement parsed = JsonParser.parseString(body);
+                if (!parsed.isJsonArray()) {
+                    continue;
+                }
+                JsonArray arr = parsed.getAsJsonArray();
+                for (JsonElement el : arr) {
+                    if (!el.isJsonObject()) continue;
+                    JsonObject f = el.getAsJsonObject();
+                    if (!"file".equalsIgnoreCase(str(f, "type"))) {
+                        continue;
+                    }
+                    String rawName = str(f, "name");
+                    String path = str(f, "path");
+                    if (path.isEmpty()) continue;
 
-                String displayName = FileUtils.stripTimestampPrefix(rawName);
-                long stampTime = FileUtils.parseTimestampPrefix(rawName);
-                long size = f.has("size") ? f.get("size").getAsLong() : 0L;
-                String sha = str(f, "sha");
+                    String sha = str(f, "sha");
+                    String dedupeKey = path + "|" + sha;
+                    if (!seenPathSha.add(dedupeKey)) {
+                        continue;
+                    }
 
-                String enc = FileUtils.encodePath(path);
-                UploadItem it = new UploadItem();
-                it.owner = cfg.owner;
-                it.repo = cfg.repo;
-                it.previewBranch = branch;
-                it.name = displayName.isEmpty() ? rawName : displayName;
-                it.size = size;
-                it.mime = resolveMime(it.name, null);
-                it.time = stampTime;
-                it.previewPath = path;
-                it.repoFileSha = sha;
-                it.previewUrl = "https://cdn.jsdelivr.net/gh/" + cfg.owner + "/" + cfg.repo
-                        + "@" + branch + "/" + enc;
-                it.previewRawUrl = "https://raw.githubusercontent.com/" + cfg.owner + "/" + cfg.repo
-                        + "/" + branch + "/" + enc;
-                it.pageUrl = "https://github.com/" + cfg.owner + "/" + cfg.repo
-                        + "/blob/" + branch + "/" + enc;
-                it.mode = "preview";
-                result.add(it);
+                    String displayName = FileUtils.stripTimestampPrefix(rawName);
+                    long stampTime = FileUtils.parseTimestampPrefix(rawName);
+                    long size = f.has("size") ? f.get("size").getAsLong() : 0L;
+
+                    String enc = FileUtils.encodePath(path);
+                    UploadItem it = new UploadItem();
+                    it.owner = cfg.owner;
+                    it.repo = cfg.repo;
+                    it.previewBranch = branch;
+                    it.name = displayName.isEmpty() ? rawName : displayName;
+                    it.size = size;
+                    it.mime = resolveMime(it.name, null);
+                    it.time = stampTime;
+                    it.previewPath = path;
+                    it.repoFileSha = sha;
+                    it.previewUrl = "https://cdn.jsdelivr.net/gh/" + cfg.owner + "/" + cfg.repo
+                            + "@" + branch + "/" + enc;
+                    it.previewRawUrl = "https://raw.githubusercontent.com/" + cfg.owner + "/" + cfg.repo
+                            + "/" + branch + "/" + enc;
+                    it.pageUrl = "https://github.com/" + cfg.owner + "/" + cfg.repo
+                            + "/blob/" + branch + "/" + enc;
+                    it.mode = "preview";
+                    result.add(it);
+                }
             }
         }
         return result;
+    }
+
+    private static void addUniqueBranch(List<String> target, String candidate) {
+        if (candidate == null || candidate.trim().isEmpty()) {
+            return;
+        }
+        String c = candidate.trim();
+        for (String existing : target) {
+            if (existing.equalsIgnoreCase(c)) {
+                return;
+            }
+        }
+        target.add(c);
     }
 
     private static List<UploadItem> mergeOnlineAndLocal(

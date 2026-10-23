@@ -1,5 +1,6 @@
 package com.bayram.githubfileupload;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
@@ -12,7 +13,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.widget.ImageViewCompat;
-import android.content.res.ColorStateList;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -24,18 +24,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Экран настроек GitHub с двумя переключаемыми режимами:
- * 1) «Через GitHub» — вход через OAuth Device Flow без ручного создания токена,
- *    список всех репозиториев аккаунта, переключение в 1 клик, создание нового
- *    публичного репозитория с README.md и полное удаление репозитория вместе с файлами.
- * 2) «Ручной режим» — быстрый выбор репозитория по одному лишь токену + классический
- *    ручной ввод владельца, репозитория и веток.
+ * Экран настроек GitHub с двумя переключаемыми режимами («Через GitHub» и «Ручной режим»),
+ * выбором/созданием/удалением репозиториев и выбором/созданием/ручным вводом веток.
  */
 public class ConfigActivity extends AppCompatActivity implements
         RepoListAdapter.Listener,
         GitHubDeviceAuthDialogFragment.Listener,
         CreateRepoDialogFragment.Listener,
-        DeleteRepoDialogFragment.Listener {
+        DeleteRepoDialogFragment.Listener,
+        BranchPickerDialogFragment.Listener {
 
     public static final String EXTRA_FORCE_MODE = "extra_force_mode";
     public static final String EXTRA_AUTO_START_OAUTH = "extra_auto_start_oauth";
@@ -54,6 +51,7 @@ public class ConfigActivity extends AppCompatActivity implements
     private ImageView ivOAuthAvatar;
     private TextView tvOAuthLogin;
     private TextView tvOAuthSub;
+    private MaterialButton btnOAuthActiveBranch;
 
     // Manual cards & inputs
     private View manualTokenCard;
@@ -105,6 +103,7 @@ public class ConfigActivity extends AppCompatActivity implements
         ivOAuthAvatar.setClipToOutline(true);
         tvOAuthLogin = findViewById(R.id.tvOAuthLogin);
         tvOAuthSub = findViewById(R.id.tvOAuthSub);
+        btnOAuthActiveBranch = findViewById(R.id.btnOAuthActiveBranch);
 
         manualTokenCard = findViewById(R.id.manualTokenCard);
         manualFieldsCard = findViewById(R.id.manualFieldsCard);
@@ -129,11 +128,11 @@ public class ConfigActivity extends AppCompatActivity implements
         Button btnSave = findViewById(R.id.btnSave);
         MaterialButton btnCheck = findViewById(R.id.btnCheck);
 
-        recyclerRepos.setLayoutManager(new LinearLayoutManager(this));
-        repoAdapter = new RepoListAdapter(this, repoItems, this);
-        recyclerRepos.setAdapter(repoAdapter);
-
         cfg = Prefs.getConfig(this);
+
+        recyclerRepos.setLayoutManager(new LinearLayoutManager(this));
+        repoAdapter = new RepoListAdapter(this, repoItems, cfg, this);
+        recyclerRepos.setAdapter(repoAdapter);
 
         if (savedInstanceState == null && getIntent() != null) {
             String forced = getIntent().getStringExtra(EXTRA_FORCE_MODE);
@@ -152,6 +151,12 @@ public class ConfigActivity extends AppCompatActivity implements
 
         btnOAuthLogin.setOnClickListener(v -> openDeviceAuthDialog());
         btnOAuthLogout.setOnClickListener(v -> logoutOAuth());
+        btnOAuthActiveBranch.setOnClickListener(v -> {
+            if (cfg.isOAuthLoggedIn() && cfg.oauthRepo != null && !cfg.oauthRepo.isEmpty()) {
+                openBranchDialog(cfg.oauthOwner, cfg.oauthRepo, cfg.oauthBranch);
+            }
+        });
+
         btnLoadManualRepos.setOnClickListener(v -> onLoadManualReposClicked());
         btnRefreshRepos.setOnClickListener(v -> refreshReposForCurrentMode());
         btnCreateRepo.setOnClickListener(v -> openCreateRepoDialog());
@@ -181,7 +186,6 @@ public class ConfigActivity extends AppCompatActivity implements
         if (targetMode.equalsIgnoreCase(cfg.authMode)) {
             return;
         }
-        // Если уходим с ручной вкладки — запомним введённые поля, чтобы не пропали
         if (!cfg.isOAuthMode()) {
             captureManualDraftIntoConfig();
         }
@@ -190,7 +194,7 @@ public class ConfigActivity extends AppCompatActivity implements
         Prefs.saveConfig(this, cfg);
 
         repoItems.clear();
-        repoAdapter.notifyDataSetChanged();
+        repoAdapter.updateState(cfg);
         setStatus("", false);
         renderModeUi(true);
     }
@@ -209,7 +213,7 @@ public class ConfigActivity extends AppCompatActivity implements
         tvTabManual.setTextColor(!oauth ? colorOnPrimary : colorInactive);
         ImageViewCompat.setImageTintList(ivTabManual, ColorStateList.valueOf(!oauth ? colorOnPrimary : colorInactive));
 
-        repoAdapter.setActiveRepo(cfg.owner, cfg.repo);
+        repoAdapter.updateState(cfg);
 
         if (oauth) {
             manualTokenCard.setVisibility(View.GONE);
@@ -226,7 +230,7 @@ public class ConfigActivity extends AppCompatActivity implements
                     title = cfg.oauthName.trim() + " (@" + cfg.oauthOwner + ")";
                 }
                 tvOAuthLogin.setText(title);
-                updateOAuthSubtitle();
+                updateOAuthSubtitleAndBranchButton();
 
                 if (cfg.oauthAvatarUrl != null && !cfg.oauthAvatarUrl.isEmpty()) {
                     ImageLoader.load(this, ivOAuthAvatar, cfg.oauthAvatarUrl, R.drawable.ic_account);
@@ -260,12 +264,17 @@ public class ConfigActivity extends AppCompatActivity implements
         }
     }
 
-    private void updateOAuthSubtitle() {
+    private void updateOAuthSubtitleAndBranchButton() {
         if (cfg.oauthRepo != null && !cfg.oauthRepo.trim().isEmpty()) {
+            String chosenBranch = cfg.getSavedBranchForRepo(
+                    cfg.oauthOwner, cfg.oauthRepo, cfg.previewBranch);
             tvOAuthSub.setText(getString(R.string.repo_selected_toast,
-                    cfg.oauthOwner + "/" + cfg.oauthRepo));
+                    cfg.oauthOwner + "/" + cfg.oauthRepo, chosenBranch));
+            btnOAuthActiveBranch.setVisibility(View.VISIBLE);
+            btnOAuthActiveBranch.setText(getString(R.string.oauth_active_branch_btn, chosenBranch));
         } else {
             tvOAuthSub.setText(R.string.oauth_logged_in_badge);
+            btnOAuthActiveBranch.setVisibility(View.GONE);
         }
     }
 
@@ -274,8 +283,12 @@ public class ConfigActivity extends AppCompatActivity implements
         etOwner.setText(cfg.manualOwner == null ? "" : cfg.manualOwner);
         etRepo.setText(cfg.manualRepo == null ? "" : cfg.manualRepo);
         etBranch.setText(cfg.manualBranch == null || cfg.manualBranch.isEmpty() ? "main" : cfg.manualBranch);
-        etPreviewBranch.setText(cfg.manualPreviewBranch == null || cfg.manualPreviewBranch.isEmpty()
-                ? "files" : cfg.manualPreviewBranch);
+        String pBranch = (cfg.manualPreviewBranch == null || cfg.manualPreviewBranch.isEmpty())
+                ? "files" : cfg.manualPreviewBranch;
+        if (cfg.manualRepo != null && !cfg.manualRepo.isEmpty()) {
+            pBranch = cfg.getSavedBranchForRepo(cfg.manualOwner, cfg.manualRepo, pBranch);
+        }
+        etPreviewBranch.setText(pBranch);
     }
 
     private void captureManualDraftIntoConfig() {
@@ -284,9 +297,12 @@ public class ConfigActivity extends AppCompatActivity implements
         cfg.manualOwner = parsed.owner;
         cfg.manualRepo = parsed.repo;
         String br = textOf(etBranch);
-        String pbr = textOf(etPreviewBranch);
+        String pbr = GitHubAccountManager.sanitizeBranchName(textOf(etPreviewBranch));
         cfg.manualBranch = br.isEmpty() ? "main" : br;
         cfg.manualPreviewBranch = pbr.isEmpty() ? "files" : pbr;
+        if (!parsed.repo.isEmpty()) {
+            cfg.saveBranchForRepo(parsed.owner, parsed.repo, cfg.manualPreviewBranch);
+        }
     }
 
     private void openDeviceAuthDialog() {
@@ -331,7 +347,7 @@ public class ConfigActivity extends AppCompatActivity implements
         Prefs.saveConfig(this, cfg);
 
         repoItems.clear();
-        repoAdapter.notifyDataSetChanged();
+        repoAdapter.updateState(cfg);
         setStatus(getString(R.string.oauth_logout_done), false);
         Toast.makeText(this, R.string.oauth_logout_done, Toast.LENGTH_SHORT).show();
         renderModeUi(false);
@@ -381,7 +397,6 @@ public class ConfigActivity extends AppCompatActivity implements
                                 Prefs.saveConfig(ConfigActivity.this, cfg);
                             }
                         } else {
-                            // В ручном режиме автоматически подставляем логин владельца токена, если он пуст
                             if (!res.user.login.isEmpty() && textOf(etOwner).isEmpty()) {
                                 etOwner.setText(res.user.login);
                                 cfg.manualOwner = res.user.login;
@@ -391,7 +406,7 @@ public class ConfigActivity extends AppCompatActivity implements
 
                         repoItems.clear();
                         repoItems.addAll(res.repos);
-                        repoAdapter.setActiveRepo(cfg.owner, cfg.repo);
+                        repoAdapter.updateState(cfg);
 
                         if (repoItems.isEmpty()) {
                             tvReposEmpty.setVisibility(View.VISIBLE);
@@ -421,13 +436,17 @@ public class ConfigActivity extends AppCompatActivity implements
         if (repo == null) {
             return;
         }
+        String savedBranch = cfg.getSavedBranchForRepo(repo.owner, repo.name, "files");
+
         if (cfg.isOAuthMode()) {
             cfg.oauthOwner = repo.owner;
             cfg.oauthRepo = repo.name;
             cfg.oauthBranch = repo.defaultBranch;
+            cfg.oauthPreviewBranch = savedBranch;
+            cfg.saveBranchForRepo(repo.owner, repo.name, savedBranch);
             cfg.syncActiveFromMode();
             Prefs.saveConfig(this, cfg);
-            updateOAuthSubtitle();
+            updateOAuthSubtitleAndBranchButton();
         } else {
             String tok = textOf(etToken);
             if (!tok.isEmpty()) {
@@ -436,25 +455,62 @@ public class ConfigActivity extends AppCompatActivity implements
             cfg.manualOwner = repo.owner;
             cfg.manualRepo = repo.name;
             cfg.manualBranch = repo.defaultBranch;
-            String pbr = textOf(etPreviewBranch);
-            cfg.manualPreviewBranch = pbr.isEmpty() ? "files" : pbr;
+            cfg.manualPreviewBranch = savedBranch;
+            cfg.saveBranchForRepo(repo.owner, repo.name, savedBranch);
 
             etOwner.setText(repo.owner);
             etRepo.setText(repo.name);
             etBranch.setText(repo.defaultBranch);
+            etPreviewBranch.setText(savedBranch);
 
             cfg.syncActiveFromMode();
             Prefs.saveConfig(this, cfg);
         }
 
-        repoAdapter.setActiveRepo(cfg.owner, cfg.repo);
+        repoAdapter.updateState(cfg);
         String full = repo.owner + "/" + repo.name;
-        String msg = getString(R.string.repo_selected_toast, full);
+        String msg = getString(R.string.repo_selected_toast, full, cfg.previewBranch);
         if (repo.privateRepo) {
             msg += " · " + getString(R.string.error_private_repo);
         }
         setStatus(msg, repo.privateRepo);
-        Toast.makeText(this, getString(R.string.repo_selected_toast, full), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, getString(R.string.repo_selected_toast, full, cfg.previewBranch),
+                Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onRepoBranchClicked(GitHubAccountManager.UserRepo repo) {
+        if (repo == null) {
+            return;
+        }
+        // Если нажали ▾ на репозитории — также делаем этот репозиторий активным
+        onRepoSelected(repo);
+        openBranchDialog(repo.owner, repo.name, repo.defaultBranch);
+    }
+
+    private void openBranchDialog(String owner, String repo, String defaultBranch) {
+        String tok = activeTokenForRepoActions();
+        if (tok.isEmpty()) {
+            Toast.makeText(this, R.string.manual_enter_token_first, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String current = cfg.getSavedBranchForRepo(owner, repo, cfg.previewBranch);
+        BranchPickerDialogFragment.newInstance(owner, repo, tok, current, defaultBranch)
+                .show(getSupportFragmentManager(), "branch-picker");
+    }
+
+    @Override
+    public void onBranchChanged(String owner, String repo, String selectedBranch) {
+        cfg = Prefs.getConfig(this);
+        if (!cfg.isOAuthMode()
+                && repo != null && repo.equalsIgnoreCase(textOf(etRepo))) {
+            etPreviewBranch.setText(selectedBranch);
+        }
+        if (cfg.isOAuthMode()) {
+            updateOAuthSubtitleAndBranchButton();
+        }
+        repoAdapter.updateState(cfg);
+        setStatus(getString(R.string.repo_selected_toast, owner + "/" + repo, selectedBranch), false);
     }
 
     private void openCreateRepoDialog() {
@@ -492,7 +548,6 @@ public class ConfigActivity extends AppCompatActivity implements
                         progressRepos.setVisibility(View.GONE);
                         tvReposEmpty.setVisibility(View.GONE);
 
-                        // Ставим новый репозиторий на первое место и сразу выбираем его активным
                         for (int i = repoItems.size() - 1; i >= 0; i--) {
                             if (repoItems.get(i).name.equalsIgnoreCase(created.name)) {
                                 repoItems.remove(i);
@@ -551,7 +606,6 @@ public class ConfigActivity extends AppCompatActivity implements
                 if (isFinishing()) return;
                 progressRepos.setVisibility(View.GONE);
 
-                // Очищаем локальный кэш истории удалённого репозитория
                 Prefs.removeRepoHistory(ConfigActivity.this, owner, repo);
 
                 for (int i = repoItems.size() - 1; i >= 0; i--) {
@@ -562,7 +616,6 @@ public class ConfigActivity extends AppCompatActivity implements
                     }
                 }
 
-                // Если удалён активный репозиторий — снимаем выбор
                 if (repo.equalsIgnoreCase(cfg.oauthRepo)
                         && (owner.isEmpty() || owner.equalsIgnoreCase(cfg.oauthOwner))) {
                     cfg.oauthRepo = "";
@@ -578,10 +631,10 @@ public class ConfigActivity extends AppCompatActivity implements
                 Prefs.saveConfig(ConfigActivity.this, cfg);
 
                 if (cfg.isOAuthMode()) {
-                    updateOAuthSubtitle();
+                    updateOAuthSubtitleAndBranchButton();
                 }
 
-                repoAdapter.setActiveRepo(cfg.owner, cfg.repo);
+                repoAdapter.updateState(cfg);
                 if (repoItems.isEmpty()) {
                     tvReposEmpty.setVisibility(View.VISIBLE);
                     tvReposEmpty.setText(cfg.isOAuthMode()
@@ -624,8 +677,9 @@ public class ConfigActivity extends AppCompatActivity implements
         }
         etOwner.setText(cfg.owner);
         etRepo.setText(cfg.repo);
+        etPreviewBranch.setText(cfg.previewBranch);
         Prefs.saveConfig(this, cfg);
-        repoAdapter.setActiveRepo(cfg.owner, cfg.repo);
+        repoAdapter.updateState(cfg);
         setStatus(getString(R.string.config_saved), false);
         Toast.makeText(this, R.string.config_saved, Toast.LENGTH_SHORT).show();
     }

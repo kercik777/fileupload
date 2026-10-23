@@ -15,31 +15,36 @@ import com.google.android.material.button.MaterialButton;
 import java.util.List;
 
 /**
- * Адаптер списка репозиториев аккаунта с переключением активного репозитория в 1 клик
- * и кнопкой полного удаления репозитория вместе со всеми файлами.
+ * Адаптер списка репозиториев аккаунта с переключением активного репозитория в 1 клик,
+ * кнопкой выбора/создания ветки (▾) и кнопкой полного удаления репозитория.
  */
 public class RepoListAdapter extends RecyclerView.Adapter<RepoListAdapter.VH> {
 
     public interface Listener {
         void onRepoSelected(GitHubAccountManager.UserRepo repo);
+        void onRepoBranchClicked(GitHubAccountManager.UserRepo repo);
         void onRepoDeleteRequested(GitHubAccountManager.UserRepo repo);
     }
 
     private final Context ctx;
     private final List<GitHubAccountManager.UserRepo> items;
     private final Listener listener;
+    private GitHubConfig config;
     private String activeOwner = "";
     private String activeRepo = "";
 
-    public RepoListAdapter(Context ctx, List<GitHubAccountManager.UserRepo> items, Listener listener) {
+    public RepoListAdapter(Context ctx, List<GitHubAccountManager.UserRepo> items,
+                           GitHubConfig config, Listener listener) {
         this.ctx = ctx;
         this.items = items;
+        this.config = config;
         this.listener = listener;
     }
 
-    public void setActiveRepo(String owner, String repo) {
-        this.activeOwner = owner == null ? "" : owner.trim();
-        this.activeRepo = repo == null ? "" : repo.trim();
+    public void updateState(GitHubConfig cfg) {
+        this.config = cfg;
+        this.activeOwner = (cfg == null || cfg.owner == null) ? "" : cfg.owner.trim();
+        this.activeRepo = (cfg == null || cfg.repo == null) ? "" : cfg.repo.trim();
         notifyDataSetChanged();
     }
 
@@ -57,11 +62,19 @@ public class RepoListAdapter extends RecyclerView.Adapter<RepoListAdapter.VH> {
                 && repo.name.equalsIgnoreCase(activeRepo)
                 && (activeOwner.isEmpty() || repo.owner.equalsIgnoreCase(activeOwner));
 
+        String chosenBranch = "files";
+        if (config != null) {
+            String fallback = isActive && config.previewBranch != null && !config.previewBranch.isEmpty()
+                    ? config.previewBranch : "files";
+            chosenBranch = config.getSavedBranchForRepo(repo.owner, repo.name, fallback);
+        }
+
         holder.tvName.setText(repo.name);
+        holder.btnBranch.setText(chosenBranch);
 
         String vis = ctx.getString(repo.privateRepo
                 ? R.string.repo_private_badge : R.string.repo_public_badge);
-        String meta = vis + " · " + repo.defaultBranch;
+        String meta = vis + " · ветка: " + chosenBranch;
         if (!repo.owner.isEmpty()) {
             meta = "@" + repo.owner + " · " + meta;
         }
@@ -78,6 +91,7 @@ public class RepoListAdapter extends RecyclerView.Adapter<RepoListAdapter.VH> {
         }
 
         holder.root.setOnClickListener(v -> listener.onRepoSelected(repo));
+        holder.btnBranch.setOnClickListener(v -> listener.onRepoBranchClicked(repo));
         holder.btnDelete.setOnClickListener(v -> listener.onRepoDeleteRequested(repo));
     }
 
@@ -92,6 +106,7 @@ public class RepoListAdapter extends RecyclerView.Adapter<RepoListAdapter.VH> {
         final TextView tvName;
         final TextView tvActiveBadge;
         final TextView tvMeta;
+        final MaterialButton btnBranch;
         final MaterialButton btnDelete;
 
         VH(@NonNull View itemView) {
@@ -101,6 +116,7 @@ public class RepoListAdapter extends RecyclerView.Adapter<RepoListAdapter.VH> {
             tvName = itemView.findViewById(R.id.tvRepoName);
             tvActiveBadge = itemView.findViewById(R.id.tvRepoActiveBadge);
             tvMeta = itemView.findViewById(R.id.tvRepoMeta);
+            btnBranch = itemView.findViewById(R.id.btnRepoBranch);
             btnDelete = itemView.findViewById(R.id.btnDeleteRepo);
         }
     }

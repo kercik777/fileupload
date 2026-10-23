@@ -69,6 +69,9 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.VH> {
         if (item.tag != null && !item.tag.isEmpty() && hasDownload) {
             metaSb.append(" · ").append(item.tag);
         }
+        if (hasPreview && item.previewBranch != null && !item.previewBranch.isEmpty()) {
+            metaSb.append(" · ветка ").append(item.previewBranch);
+        }
         holder.meta.setText(metaSb.toString());
 
         if (hasBoth) {

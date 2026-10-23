@@ -3,10 +3,13 @@ package com.bayram.githubfileupload;
 import java.util.Locale;
 
 /**
- * Запись одной загрузки: файл, теги и полученные ссылки.
+ * Запись одной загрузки: файл, теги, выбранная ветка и полученные ссылки.
  * Поддерживает как локальную историю, так и онлайн-синхронизацию через GitHub API.
  */
 public class UploadItem {
+
+    /** Лимит CDN jsDelivr (20 МБ): для файлов крупнее 20 МБ используется прямая raw-ссылка. */
+    public static final long JSDELIVR_LIMIT_BYTES = 20L * 1024L * 1024L;
 
     public long id;
     public String name = "";
@@ -51,6 +54,9 @@ public class UploadItem {
     }
 
     public String bestPreviewUrl() {
+        if (size > JSDELIVR_LIMIT_BYTES && previewRawUrl != null && !previewRawUrl.isEmpty()) {
+            return previewRawUrl;
+        }
         if (previewUrl != null && !previewUrl.isEmpty()) {
             return previewUrl;
         }
@@ -123,12 +129,18 @@ public class UploadItem {
         }
         if (previewPath != null && !previewPath.isEmpty()
                 && other.previewPath != null && previewPath.equals(other.previewPath)
-                && safeEq(owner, other.owner) && safeEq(repo, other.repo)) {
+                && safeEq(owner, other.owner) && safeEq(repo, other.repo)
+                && (isEmpty(previewBranch) || isEmpty(other.previewBranch)
+                || safeEq(previewBranch, other.previewBranch))) {
             return true;
         }
         String p1 = bestPreviewUrl();
         String p2 = other.bestPreviewUrl();
         return !p1.isEmpty() && p1.equals(p2);
+    }
+
+    private static boolean isEmpty(String s) {
+        return s == null || s.isEmpty();
     }
 
     private static boolean safeEq(String a, String b) {

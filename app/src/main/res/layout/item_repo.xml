@@ -11,15 +11,15 @@
     android:focusable="true"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="14dp"
+    android:paddingStart="12dp"
     android:paddingTop="12dp"
-    android:paddingEnd="10dp"
+    android:paddingEnd="8dp"
     android:paddingBottom="12dp">
 
     <ImageView
         android:id="@+id/ivRepoIcon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
         android:contentDescription="@null"
         android:src="@drawable/ic_folder"
         app:tint="@color/md_primary" />
@@ -27,8 +27,8 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="8dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="6dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -56,9 +56,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:background="@drawable/bg_badge_active"
-                android:paddingStart="8dp"
+                android:paddingStart="7dp"
                 android:paddingTop="2dp"
-                android:paddingEnd="8dp"
+                android:paddingEnd="7dp"
                 android:paddingBottom="2dp"
                 android:text="@string/repo_active_badge"
                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
@@ -77,14 +77,36 @@
             android:singleLine="true"
             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
             android:textColor="@color/md_on_surface_variant"
-            tools:text="Публичный · ветка main" />
+            tools:text="Публичный · ветка: main" />
     </LinearLayout>
+
+    <!-- Кнопка выбора / создания ветки (menu-down ▾) рядом с каждым репозиторием -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnRepoBranch"
+        style="@style/Widget.GitHubUploader.Button.Tonal"
+        android:layout_width="wrap_content"
+        android:layout_height="38dp"
+        android:layout_marginEnd="6dp"
+        android:contentDescription="@string/a11y_pick_branch"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:maxWidth="120dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="6dp"
+        android:textSize="12sp"
+        app:icon="@drawable/ic_arrow_drop_down"
+        app:iconGravity="end"
+        app:iconPadding="2dp"
+        app:iconSize="20dp"
+        tools:text="main" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnDeleteRepo"
         style="@style/Widget.GitHubUploader.Button.Danger"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
         android:contentDescription="@string/a11y_delete_repo"
         android:insetTop="0dp"
         android:insetBottom="0dp"
@@ -94,5 +116,5 @@
         app:icon="@drawable/ic_trash"
         app:iconGravity="textStart"
         app:iconPadding="0dp"
-        app:iconSize="18dp" />
+        app:iconSize="17dp" />
 </LinearLayout>

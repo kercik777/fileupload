@@ -15,7 +15,7 @@
     <string name="onboarding_subtitle">Войдите через GitHub — приложение само получит токен, покажет ваши репозитории или создаст новый в один клик.</string>
     <string name="onboarding_login_github">Войти через GitHub</string>
     <string name="onboarding_manual_token">Ввести токен вручную</string>
-    <string name="active_repo_chip">Активный репозиторий: %1$s</string>
+    <string name="active_repo_chip">%1$s</string>
     <string name="select_file">Выбрать файл</string>
     <string name="select_file_hint">Фотография, видео или любой файл</string>
     <string name="file_not_selected">Файл не выбран</string>
@@ -30,6 +30,8 @@
     <string name="status_done">Готово! Ссылки готовы</string>
     <string name="status_failed">Ошибка загрузки</string>
     <string name="cancel">Отмена</string>
+    <string name="close">Закрыть</string>
+    <string name="ok_understood">Понятно</string>
     <string name="copy">Копировать</string>
     <string name="copy_link">Скопировать ссылку</string>
     <string name="open">Открыть</string>
@@ -46,7 +48,7 @@
     <string name="menu_history">История</string>
     <string name="menu_settings">Настройки</string>
     <string name="about_text">GitHub Uploader — загружает файлы в релиз GitHub и даёт две ссылки: для скачивания и для просмотра прямо в браузере.</string>
-    <string name="version_label">Версия 2.3</string>
+    <string name="version_label">Версия 2.4</string>
     <string name="made_with">Сделано с ❤ в Zürich</string>
 
     <!-- File format picker dialog -->
@@ -56,26 +58,57 @@
     <string name="format_video">Видео</string>
     <string name="format_file">Файл</string>
 
-    <!-- Upload choice dialog -->
+    <!-- Upload choice dialog (with clear limits) -->
     <string name="dialog_title_purpose">Для чего загружаете файл?</string>
     <string name="dialog_subtitle">Выберите, какую ссылку получить</string>
     <string name="option_download">Прямая ссылка для скачивания</string>
-    <string name="option_download_desc">Файл уходит в релиз GitHub, ссылка скачивает его</string>
+    <string name="option_download_desc">В релиз GitHub · размер файла до 2 ГБ</string>
     <string name="option_preview">Ссылка для просмотра в браузере</string>
-    <string name="option_preview_desc">Файл попадает в репозиторий, друзья видят фото или видео прямо в браузере</string>
+    <string name="option_preview_desc">В выбранную ветку · CDN до 20 МБ (макс. 65 МБ)</string>
     <string name="option_both">Оба варианта</string>
-    <string name="option_both_desc">Скачивание плюс просмотр — рекомендуется</string>
+    <string name="option_both_desc">Скачивание (до 2 ГБ) + просмотр (рек. до 20 МБ)</string>
+
+    <!-- Smart File Size Warning Dialog -->
+    <string name="size_warn_over_2gb_title">Превышен лимит GitHub (2 ГБ)</string>
+    <string name="size_warn_over_2gb_msg">Выбранный файл весит %1$s.\n\nМаксимальный размер одного файла на GitHub:\n• для скачивания (Releases) — не более 2 ГБ;\n• для просмотра (в ветку) — до 65 МБ (рекомендуется до 20 МБ).\n\nВыберите файл размером до 2 ГБ.</string>
+    <string name="size_warn_over_65mb_title">Слишком большой для ветки просмотра</string>
+    <string name="size_warn_over_65mb_msg">Файл весит %1$s.\n\nВ ветку репозитория для просмотра можно загружать файлы максимум до 65 МБ (а для быстрого CDN jsDelivr — до 20 МБ).\n\nЗато в режиме «Только для скачивания» (GitHub Releases) разрешены файлы размером до 2 ГБ!</string>
+    <string name="size_warn_over_20mb_title">Файл больше 20 МБ</string>
+    <string name="size_warn_over_20mb_msg">Файл весит %1$s.\n\nДля просмотра в ветке рекомендуется размер до 20 МБ: для файлов свыше 20 МБ быстрый CDN jsDelivr не работает, поэтому будет выдана прямая raw-ссылка GitHub (потолок ветки — 65 МБ, а для скачивания в Releases — до 2 ГБ).</string>
+    <string name="size_warn_btn_download_only">Загрузить только для скачивания (до 2 ГБ)</string>
+    <string name="size_warn_btn_continue">Продолжить загрузку</string>
+
+    <!-- Branch Picker & Creation Dialog -->
+    <string name="branch_dialog_title">Ветка для загрузки</string>
+    <string name="branch_dialog_subtitle">Репозиторий: %1$s</string>
+    <string name="branch_input_hint">Имя новой или ручной ветки (напр. main, files)</string>
+    <string name="branch_btn_create">Создать ветку</string>
+    <string name="branch_btn_manual">Указать вручную</string>
+    <string name="branch_list_header">Существующие ветки в репозитории</string>
+    <string name="branch_loading">Загружаем ветки из GitHub…</string>
+    <string name="branch_empty">Ветки не найдены — укажите имя выше вручную</string>
+    <string name="branch_default_badge">Основная</string>
+    <string name="branch_selected_badge">Выбрана</string>
+    <string name="branch_saved_toast">Выбрана ветка: %1$s</string>
+    <string name="branch_created_toast">Ветка «%1$s» создана и выбрана!</string>
+    <string name="branch_deleted_toast">Ветка «%1$s» удалена</string>
+    <string name="branch_invalid_name">Введите корректное имя ветки (например: main или photos)</string>
+    <string name="branch_cannot_delete_default">Основную ветку репозитория удалить нельзя</string>
+    <string name="a11y_pick_branch">Выбрать или создать ветку</string>
+    <string name="a11y_delete_branch">Удалить ветку</string>
+    <string name="main_branch_hint_dynamic">Файлы для просмотра загружаются в ветку «%1$s» выбранного репозитория.</string>
 
     <!-- Settings: Modes & OAuth -->
     <string name="config_title">Настройки GitHub</string>
     <string name="mode_tab_oauth">Через GitHub</string>
     <string name="mode_tab_manual">Ручной режим</string>
     <string name="oauth_card_title">Вход через GitHub</string>
-    <string name="oauth_card_subtitle">Авторизуйтесь без ручного создания токена: выбирайте любой свой репозиторий или создавайте новый прямо в приложении.</string>
+    <string name="oauth_card_subtitle">Авторизуйтесь без ручного создания токена: выбирайте любой свой репозиторий и ветку или создавайте новые прямо в приложении.</string>
     <string name="oauth_btn_login">Авторизоваться через GitHub</string>
     <string name="oauth_logged_in_badge">Аккаунт подключён</string>
     <string name="oauth_logout">Выйти</string>
     <string name="oauth_logout_done">Вы вышли из аккаунта GitHub</string>
+    <string name="oauth_active_branch_btn">Ветка загрузки: %1$s</string>
 
     <!-- Device Flow Auth Dialog -->
     <string name="device_auth_title">Вход в GitHub</string>
@@ -91,7 +124,7 @@
 
     <!-- Repositories List, Create & Delete -->
     <string name="repos_section_title">Мои репозитории</string>
-    <string name="repos_section_hint">Нажмите на репозиторий, чтобы выбрать его для загрузки файлов</string>
+    <string name="repos_section_hint">Нажмите на репозиторий для выбора, или на кнопку ветки (▾) для смены/создания ветки</string>
     <string name="repos_create_btn">Создать репозиторий</string>
     <string name="repos_loading">Загружаем список репозиториев…</string>
     <string name="repos_empty_oauth">У вас пока нет ни одного репозитория.\nНажмите «Создать репозиторий» выше — и хранилище будет готово!</string>
@@ -99,7 +132,7 @@
     <string name="repo_active_badge">Выбран</string>
     <string name="repo_public_badge">Публичный</string>
     <string name="repo_private_badge">Приватный</string>
-    <string name="repo_selected_toast">Активный репозиторий: %1$s</string>
+    <string name="repo_selected_toast">Активный репозиторий: %1$s (ветка %2$s)</string>
     <string name="a11y_delete_repo">Удалить репозиторий полностью</string>
 
     <!-- Create Repo Dialog -->
@@ -122,29 +155,29 @@
 
     <!-- Manual Mode -->
     <string name="manual_token_card_title">Быстрый выбор по токену</string>
-    <string name="manual_token_hint_fast">Укажите только токен и нажмите кнопку ниже — приложение само определит аккаунт и покажет все его репозитории.</string>
+    <string name="manual_token_hint_fast">Укажите только токен и нажмите кнопку ниже — приложение само определит аккаунт и покажет все его репозитории и ветки.</string>
     <string name="manual_load_repos_btn">Показать репозитории токена</string>
     <string name="manual_enter_token_first">Сначала введите Personal Access Token</string>
-    <string name="manual_advanced_title">Параметры репозитория вручную</string>
+    <string name="manual_advanced_title">Параметры репозитория и ветки вручную</string>
     <string name="config_owner_label">Владелец</string>
     <string name="config_owner_hint">Например: octocat</string>
     <string name="config_repo_label">Репозиторий</string>
     <string name="config_repo_hint">Например: my-storage</string>
     <string name="config_token_label">Personal Access Token</string>
     <string name="config_token_hint">Токен с правом repo</string>
-    <string name="config_branch_label">Бранч по умолчанию</string>
+    <string name="config_branch_label">Основной бранч релиза</string>
     <string name="config_branch_default">main</string>
-    <string name="config_preview_branch_label">Бранч для предпросмотра</string>
+    <string name="config_preview_branch_label">Ветка для загрузки файлов (просмотр)</string>
     <string name="config_preview_branch_default">files</string>
     <string name="config_save">Сохранить</string>
     <string name="config_check">Проверить соединение</string>
     <string name="config_checking">Проверка…</string>
-    <string name="config_saved">Настройки сохранены</string>
+    <string name="config_saved">Настройки и ветка сохранены</string>
     <string name="config_connected">Соединение с GitHub установлено</string>
     <string name="config_connected_as">Репозиторий доступен</string>
     <string name="config_failed">Не удалось подключиться</string>
     <string name="config_hint_token">Для работы нужен токен с правом repo (и delete_repo, если хотите удалять репозитории). Токен хранится только на устройстве.</string>
-    <string name="config_hint_preview">Файлы для просмотра уходят на отдельный бранч репозитория, оттуда работают прямые ссылки raw и CDN jsDelivr.</string>
+    <string name="config_hint_preview">Файлы для просмотра уходят на выбранную ветку репозитория, оттуда работают прямые ссылки raw и CDN jsDelivr.</string>
 
     <!-- History (Online + Smart Delete) -->
     <string name="history_empty">В репозитории пока нет загруженных файлов</string>
@@ -171,7 +204,7 @@
     <string name="delete_opt_download_title">Удалить скачивание</string>
     <string name="delete_opt_download_desc">Удалит из Releases · просмотр останется</string>
     <string name="delete_opt_preview_title">Удалить просмотр</string>
-    <string name="delete_opt_preview_desc">Удалит из ветки files · скачивание останется</string>
+    <string name="delete_opt_preview_desc">Удалит из ветки репо · скачивание останется</string>
     <string name="delete_opt_both_btn">Удалить оба варианта</string>
     <string name="history_loaded_at">Загружено: %1$s</string>
 
@@ -186,7 +219,7 @@
     <string name="error_network">Ошибка сети</string>
     <string name="error_not_configured">Сначала выберите или создайте репозиторий в настройках</string>
     <string name="error_private_repo">Для приватного репозитория публичная ссылка на просмотр недоступна</string>
-    <string name="error_large_file">Файл слишком большой для предпросмотра (лимит репозитория 100 МБ)</string>
+    <string name="error_large_file">Файл слишком большой для предпросмотра (лимит ветки 65 МБ)</string>
     <string name="error_missing_file">Файл не найден</string>
     <string name="retry">Повторить</string>
 

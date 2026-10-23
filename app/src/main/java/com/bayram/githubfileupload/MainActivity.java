@@ -37,15 +37,23 @@ import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.File;
 
-public class MainActivity extends AppCompatActivity
-        implements UploadChoiceBottomSheet.Listener, FileFormatDialogFragment.Listener {
+public class MainActivity extends AppCompatActivity implements
+        UploadChoiceBottomSheet.Listener,
+        FileFormatDialogFragment.Listener,
+        BranchPickerDialogFragment.Listener,
+        FileSizeWarningDialogFragment.Listener {
 
     private static final int REQ_STORAGE_PERMISSION = 3000;
 
     private MaterialToolbar toolbar;
     private View onboardingCard;
+    private View activeRepoBar;
     private View activeRepoBanner;
     private TextView tvActiveRepoBanner;
+    private View btnMainBranchSwitch;
+    private TextView tvMainBranchName;
+    private TextView tvPreviewBranchHint;
+
     private View fileEmptyState;
     private View fileSelectedState;
     private ImageView fileIcon;
@@ -112,8 +120,12 @@ public class MainActivity extends AppCompatActivity
         toolbar.setNavigationOnClickListener(v -> openConfig());
 
         onboardingCard = findViewById(R.id.onboardingCard);
+        activeRepoBar = findViewById(R.id.activeRepoBar);
         activeRepoBanner = findViewById(R.id.activeRepoBanner);
         tvActiveRepoBanner = findViewById(R.id.tvActiveRepoBanner);
+        btnMainBranchSwitch = findViewById(R.id.btnMainBranchSwitch);
+        tvMainBranchName = findViewById(R.id.tvMainBranchName);
+        tvPreviewBranchHint = findViewById(R.id.tvPreviewBranchHint);
 
         fileEmptyState = findViewById(R.id.fileEmptyState);
         fileSelectedState = findViewById(R.id.fileSelectedState);
@@ -134,13 +146,17 @@ public class MainActivity extends AppCompatActivity
         etTag = findViewById(R.id.etTag);
 
         config = Prefs.getConfig(this);
+        config.syncActiveFromMode();
         if (etTag.getText() == null || etTag.getText().toString().isEmpty()) {
             etTag.setText(R.string.tag_default);
         }
 
-        findViewById(R.id.btnOnboardingOAuth).setOnClickListener(v -> openConfigWithMode(GitHubConfig.MODE_OAUTH, true));
-        findViewById(R.id.btnOnboardingManual).setOnClickListener(v -> openConfigWithMode(GitHubConfig.MODE_MANUAL, false));
+        findViewById(R.id.btnOnboardingOAuth).setOnClickListener(v ->
+                openConfigWithMode(GitHubConfig.MODE_OAUTH, true));
+        findViewById(R.id.btnOnboardingManual).setOnClickListener(v ->
+                openConfigWithMode(GitHubConfig.MODE_MANUAL, false));
         activeRepoBanner.setOnClickListener(v -> openConfig());
+        btnMainBranchSwitch.setOnClickListener(v -> openMainBranchPicker());
 
         fileEmptyState.setOnClickListener(v -> showFormatDialog());
         findViewById(R.id.btnChangeFile).setOnClickListener(v -> showFormatDialog());
@@ -161,6 +177,28 @@ public class MainActivity extends AppCompatActivity
         updateRepoConnectionUi();
         updateIdleStatus();
         checkStoragePermissionOnEnter();
+    }
+
+    /** Открывает диалог переключения/создания ветки прямо на главном экране. */
+    private void openMainBranchPicker() {
+        if (config == null || !config.isValid()) {
+            openConfig();
+            return;
+        }
+        String currentBranch = (config.previewBranch == null || config.previewBranch.isEmpty())
+                ? "files" : config.previewBranch;
+        String defBranch = (config.branch == null || config.branch.isEmpty())
+                ? "main" : config.branch;
+        BranchPickerDialogFragment.newInstance(
+                        config.owner, config.repo, config.token, currentBranch, defBranch)
+                .show(getSupportFragmentManager(), "main-branch-picker");
+    }
+
+    @Override
+    public void onBranchChanged(String owner, String repo, String selectedBranch) {
+        config = Prefs.getConfig(this);
+        config.syncActiveFromMode();
+        updateRepoConnectionUi();
     }
 
     /**
@@ -230,6 +268,7 @@ public class MainActivity extends AppCompatActivity
         super.onResume();
         refreshPermissionState();
         config = Prefs.getConfig(this);
+        config.syncActiveFromMode();
         updateRepoConnectionUi();
         syncLastItemWithHistory();
         updateIdleStatus();
@@ -239,12 +278,18 @@ public class MainActivity extends AppCompatActivity
         boolean configured = config != null && config.isValid();
         if (configured) {
             onboardingCard.setVisibility(View.GONE);
-            activeRepoBanner.setVisibility(View.VISIBLE);
+            activeRepoBar.setVisibility(View.VISIBLE);
             tvActiveRepoBanner.setText(getString(R.string.active_repo_chip,
                     config.owner + "/" + config.repo));
+
+            String br = (config.previewBranch == null || config.previewBranch.trim().isEmpty())
+                    ? "files" : config.previewBranch.trim();
+            tvMainBranchName.setText(br);
+            tvPreviewBranchHint.setText(getString(R.string.main_branch_hint_dynamic, br));
         } else {
             onboardingCard.setVisibility(View.VISIBLE);
-            activeRepoBanner.setVisibility(View.GONE);
+            activeRepoBar.setVisibility(View.GONE);
+            tvPreviewBranchHint.setText(R.string.config_hint_preview);
         }
     }
 
@@ -431,7 +476,21 @@ public class MainActivity extends AppCompatActivity
         if (pickedFile == null) {
             return;
         }
+        int warnType = FileSizeWarningDialogFragment.evaluate(pickedFile.length(), mode);
+        if (warnType != FileSizeWarningDialogFragment.WARN_NONE) {
+            FileSizeWarningDialogFragment.newInstance(warnType, pickedFile.length(), mode)
+                    .show(getSupportFragmentManager(), "file-size-warning");
+            return;
+        }
         startUpload(mode);
+    }
+
+    @Override
+    public void onSizeWarningProceed(int resolvedUploadMode) {
+        if (pickedFile == null) {
+            return;
+        }
+        startUpload(resolvedUploadMode);
     }
 
     private void startUpload(int mode) {

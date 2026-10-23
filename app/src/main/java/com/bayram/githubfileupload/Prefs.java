@@ -50,6 +50,15 @@ public final class Prefs {
             if (cfg.previewBranch == null || cfg.previewBranch.isEmpty()) {
                 cfg.previewBranch = "files";
             }
+            if (cfg.savedRepoBranches == null) {
+                cfg.savedRepoBranches = new java.util.HashMap<>();
+            }
+            if (cfg.repo != null && !cfg.repo.trim().isEmpty()) {
+                String existingSaved = cfg.getSavedBranchForRepo(cfg.owner, cfg.repo, "");
+                if (existingSaved.isEmpty()) {
+                    cfg.saveBranchForRepo(cfg.owner, cfg.repo, cfg.previewBranch);
+                }
+            }
             // Плавная миграция со старых версий, где был только ручной ввод
             if (cfg.authMode == null || cfg.authMode.isEmpty()) {
                 if (cfg.token != null && !cfg.token.trim().isEmpty()) {
