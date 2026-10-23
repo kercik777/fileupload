@@ -48,7 +48,7 @@
     <string name="menu_history">История</string>
     <string name="menu_settings">Настройки</string>
     <string name="about_text">GitHub Uploader — загружает файлы в релиз GitHub и даёт две ссылки: для скачивания и для просмотра прямо в браузере.</string>
-    <string name="version_label">Версия 2.4</string>
+    <string name="version_label">Версия 2.5</string>
     <string name="made_with">Сделано с ❤ в Zürich</string>
 
     <!-- File format picker dialog -->
@@ -109,6 +109,10 @@
     <string name="oauth_logout">Выйти</string>
     <string name="oauth_logout_done">Вы вышли из аккаунта GitHub</string>
     <string name="oauth_active_branch_btn">Ветка загрузки: %1$s</string>
+    <string name="oauth_opening_browser">Открываем GitHub в браузере для подтверждения…</string>
+    <string name="oauth_exchanging_code">Завершаем вход в аккаунт GitHub…</string>
+    <string name="oauth_state_mismatch">Сессия входа устарела — нажмите «Авторизоваться» ещё раз</string>
+    <string name="oauth_missing_client_secret">Вставьте ваш Client Secret в переменную CLIENT_SECRET в начале файла GitHubAccountManager.java перед сборкой APK (сейчас открыт резервный вход по коду).</string>
 
     <!-- Device Flow Auth Dialog -->
     <string name="device_auth_title">Вход в GitHub</string>

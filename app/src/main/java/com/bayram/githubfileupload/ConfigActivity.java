@@ -1,6 +1,8 @@
 package com.bayram.githubfileupload;
 
+import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
@@ -47,6 +49,7 @@ public class ConfigActivity extends AppCompatActivity implements
 
     // OAuth cards
     private View oauthLoginCard;
+    private Button btnOAuthLogin;
     private View oauthAccountCard;
     private ImageView ivOAuthAvatar;
     private TextView tvOAuthLogin;
@@ -120,7 +123,7 @@ public class ConfigActivity extends AppCompatActivity implements
 
         tvStatus = findViewById(R.id.tvConfigStatus);
 
-        Button btnOAuthLogin = findViewById(R.id.btnOAuthLogin);
+        btnOAuthLogin = findViewById(R.id.btnOAuthLogin);
         MaterialButton btnOAuthLogout = findViewById(R.id.btnOAuthLogout);
         MaterialButton btnLoadManualRepos = findViewById(R.id.btnLoadManualRepos);
         MaterialButton btnRefreshRepos = findViewById(R.id.btnRefreshRepos);
@@ -149,7 +152,7 @@ public class ConfigActivity extends AppCompatActivity implements
         tabOAuth.setOnClickListener(v -> switchMode(GitHubConfig.MODE_OAUTH));
         tabManual.setOnClickListener(v -> switchMode(GitHubConfig.MODE_MANUAL));
 
-        btnOAuthLogin.setOnClickListener(v -> openDeviceAuthDialog());
+        btnOAuthLogin.setOnClickListener(v -> startGitHubOAuth());
         btnOAuthLogout.setOnClickListener(v -> logoutOAuth());
         btnOAuthActiveBranch.setOnClickListener(v -> {
             if (cfg.isOAuthLoggedIn() && cfg.oauthRepo != null && !cfg.oauthRepo.isEmpty()) {
@@ -163,13 +166,36 @@ public class ConfigActivity extends AppCompatActivity implements
         btnSave.setOnClickListener(v -> saveManual());
         btnCheck.setOnClickListener(v -> checkManual());
 
-        renderModeUi(true);
+        boolean handledCallback = handleOAuthRedirectIfPresent(getIntent());
+        if (!handledCallback) {
+            renderModeUi(true);
+            if (savedInstanceState == null && getIntent() != null
+                    && getIntent().getBooleanExtra(EXTRA_AUTO_START_OAUTH, false)
+                    && cfg.isOAuthMode()
+                    && !cfg.isOAuthLoggedIn()) {
+                startGitHubOAuth();
+            }
+        }
+    }
 
-        if (savedInstanceState == null && getIntent() != null
-                && getIntent().getBooleanExtra(EXTRA_AUTO_START_OAUTH, false)
-                && cfg.isOAuthMode()
-                && !cfg.isOAuthLoggedIn()) {
-            openDeviceAuthDialog();
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (handleOAuthRedirectIfPresent(intent)) {
+            return;
+        }
+        if (intent != null) {
+            String forced = intent.getStringExtra(EXTRA_FORCE_MODE);
+            if (GitHubConfig.MODE_OAUTH.equalsIgnoreCase(forced)
+                    || GitHubConfig.MODE_MANUAL.equalsIgnoreCase(forced)) {
+                switchMode(forced);
+            }
+            if (intent.getBooleanExtra(EXTRA_AUTO_START_OAUTH, false)
+                    && cfg.isOAuthMode()
+                    && !cfg.isOAuthLoggedIn()) {
+                startGitHubOAuth();
+            }
         }
     }
 
@@ -305,9 +331,109 @@ public class ConfigActivity extends AppCompatActivity implements
         }
     }
 
-    private void openDeviceAuthDialog() {
-        new GitHubDeviceAuthDialogFragment()
-                .show(getSupportFragmentManager(), "github-device-auth");
+    /**
+     * Запускает бескодовую авторизацию GitHub в браузере с автоматическим возвратом
+     * обратно в приложение по ссылке gitstorage://callback после нажатия Authorize.
+     */
+    private void startGitHubOAuth() {
+        if (!GitHubAccountManager.hasClientSecret()) {
+            setStatus(getString(R.string.oauth_missing_client_secret), true);
+            Toast.makeText(this, R.string.oauth_missing_client_secret, Toast.LENGTH_LONG).show();
+            new GitHubDeviceAuthDialogFragment()
+                    .show(getSupportFragmentManager(), "github-device-auth");
+            return;
+        }
+
+        String state = GitHubAccountManager.generateRandomState();
+        Prefs.savePendingOAuthState(this, state);
+        String authorizeUrl = GitHubAccountManager.buildAuthorizeUrl(state);
+
+        setStatus(getString(R.string.oauth_opening_browser), false);
+        try {
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(authorizeUrl));
+            startActivity(browserIntent);
+        } catch (Exception e) {
+            new GitHubDeviceAuthDialogFragment()
+                    .show(getSupportFragmentManager(), "github-device-auth");
+        }
+    }
+
+    /**
+     * Перехватывает автоматический возврат из браузера gitstorage://callback?code=...&state=...
+     * и обменивает одноразовый code на рабочий токен GitHub.
+     */
+    private boolean handleOAuthRedirectIfPresent(Intent intent) {
+        if (intent == null) {
+            return false;
+        }
+        Uri data = intent.getData();
+        if (data == null
+                || !"gitstorage".equalsIgnoreCase(data.getScheme())
+                || !"callback".equalsIgnoreCase(data.getHost())) {
+            return false;
+        }
+
+        // Очищаем URI из Intent, чтобы при повороте экрана одноразовый code не отправлялся повторно
+        intent.setData(null);
+
+        cfg.authMode = GitHubConfig.MODE_OAUTH;
+        cfg.syncActiveFromMode();
+        Prefs.saveConfig(this, cfg);
+        renderModeUi(false);
+
+        String oauthError = data.getQueryParameter("error");
+        if (oauthError != null && !oauthError.isEmpty()) {
+            Prefs.clearPendingOAuthState(this);
+            String msg;
+            if ("access_denied".equalsIgnoreCase(oauthError)) {
+                msg = getString(R.string.device_auth_denied);
+            } else {
+                String desc = data.getQueryParameter("error_description");
+                msg = (desc != null && !desc.isEmpty()) ? desc : oauthError;
+            }
+            setStatus(msg, true);
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+            return true;
+        }
+
+        String code = data.getQueryParameter("code");
+        String returnedState = data.getQueryParameter("state");
+        String expectedState = Prefs.getPendingOAuthState(this);
+        Prefs.clearPendingOAuthState(this);
+
+        if (code == null || code.trim().isEmpty()) {
+            return false;
+        }
+        if (!expectedState.isEmpty() && returnedState != null && !expectedState.equals(returnedState)) {
+            setStatus(getString(R.string.oauth_state_mismatch), true);
+            Toast.makeText(this, R.string.oauth_state_mismatch, Toast.LENGTH_LONG).show();
+            return true;
+        }
+
+        btnOAuthLogin.setEnabled(false);
+        setStatus(getString(R.string.oauth_exchanging_code), false);
+
+        accountManager.exchangeOAuthCode(code, returnedState,
+                new GitHubAccountManager.Callback<GitHubAccountManager.AuthResult>() {
+                    @Override
+                    public void onSuccess(GitHubAccountManager.AuthResult result) {
+                        if (isFinishing()) return;
+                        btnOAuthLogin.setEnabled(true);
+                        setStatus("", false);
+                        onGitHubAuthorized(result);
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        if (isFinishing()) return;
+                        btnOAuthLogin.setEnabled(true);
+                        String msg = (error == null || error.isEmpty())
+                                ? getString(R.string.error_network) : error;
+                        setStatus(msg, true);
+                        Toast.makeText(ConfigActivity.this, msg, Toast.LENGTH_LONG).show();
+                    }
+                });
+        return true;
     }
 
     @Override

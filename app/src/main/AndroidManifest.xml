@@ -29,9 +29,19 @@
 
         <activity
             android:name=".ConfigActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/title_settings"
-            android:windowSoftInputMode="adjustResize" />
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="callback"
+                    android:scheme="gitstorage" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".HistoryActivity"

@@ -19,6 +19,7 @@ public final class Prefs {
     private static final String FILE = "github_uploader";
     private static final String KEY_CONFIG = "config";
     private static final String KEY_HISTORY = "history";
+    private static final String KEY_OAUTH_STATE = "oauth_pending_state";
     private static final int MAX_HISTORY = 200;
 
     private static final Gson GSON = new Gson();
@@ -241,5 +242,19 @@ public final class Prefs {
 
     public static void clearHistory(Context ctx) {
         sp(ctx).edit().remove(KEY_HISTORY).apply();
+    }
+
+    /** Сохраняет одноразовый параметр state на время перехода в браузер при входе через GitHub. */
+    public static void savePendingOAuthState(Context ctx, String state) {
+        sp(ctx).edit().putString(KEY_OAUTH_STATE, state == null ? "" : state).apply();
+    }
+
+    public static String getPendingOAuthState(Context ctx) {
+        String s = sp(ctx).getString(KEY_OAUTH_STATE, "");
+        return s == null ? "" : s;
+    }
+
+    public static void clearPendingOAuthState(Context ctx) {
+        sp(ctx).edit().remove(KEY_OAUTH_STATE).apply();
     }
 }

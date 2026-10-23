@@ -24,8 +24,9 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 /**
- * Управление авторизацией через GitHub OAuth (Device Flow), репозиториями и ветками:
- * - вход без собственного сервера по публичному Client ID;
+ * Управление авторизацией через GitHub OAuth (Web Flow без кода с авто-возвратом gitstorage://callback
+ * + резервный Device Flow), репозиториями и ветками:
+ * - мгновенный вход в браузере с автоматическим возвратом в приложение после нажатия Authorize;
  * - автоматическое определение пользователя (@login, аватар) по любому токену;
  * - загрузка полного списка репозиториев аккаунта;
  * - создание нового публичного репозитория с README.md в один клик;
@@ -35,6 +36,14 @@ import okhttp3.ResponseBody;
 public class GitHubAccountManager {
 
     public static final String CLIENT_ID = "Ov23licUnHLVbIdjeM2D";
+
+    /**
+     * ВСТАВЬТЕ СЮДА СВОЙ CLIENT SECRET В SKETCHWARE PRO ПЕРЕД СБОРКОЙ APK
+     * (из настроек вашего OAuth App на GitHub -> Client secrets):
+     */
+    public static final String CLIENT_SECRET = "";
+
+    public static final String REDIRECT_URI = "gitstorage://callback";
     public static final String OAUTH_SCOPES = "repo delete_repo";
 
     private static final MediaType JSON_MT = MediaType.get("application/json; charset=utf-8");
@@ -215,6 +224,115 @@ public class GitHubAccountManager {
                 .readTimeout(35, TimeUnit.SECONDS)
                 .build();
         ui = new Handler(Looper.getMainLooper());
+    }
+
+    /** Проверяет, вставлен ли CLIENT_SECRET для бескодового Web Flow с авто-возвратом. */
+    public static boolean hasClientSecret() {
+        return CLIENT_SECRET != null && !CLIENT_SECRET.trim().isEmpty();
+    }
+
+    /** Генерирует случайный защитный параметр state для OAuth-сессии. */
+    public static String generateRandomState() {
+        byte[] bytes = new byte[16];
+        new java.security.SecureRandom().nextBytes(bytes);
+        StringBuilder sb = new StringBuilder(32);
+        for (byte b : bytes) {
+            sb.append(String.format(java.util.Locale.US, "%02x", b & 0xff));
+        }
+        return sb.toString();
+    }
+
+    /** Формирует прямую ссылку согласия GitHub OAuth (без ввода одноразового кода). */
+    public static String buildAuthorizeUrl(String state) {
+        HttpUrl.Builder builder = new HttpUrl.Builder()
+                .scheme("https")
+                .host("github.com")
+                .addPathSegments("login/oauth/authorize")
+                .addQueryParameter("client_id", CLIENT_ID.trim())
+                .addQueryParameter("redirect_uri", REDIRECT_URI)
+                .addQueryParameter("scope", OAUTH_SCOPES)
+                .addQueryParameter("allow_signup", "true");
+        if (state != null && !state.isEmpty()) {
+            builder.addQueryParameter("state", state);
+        }
+        return builder.build().toString();
+    }
+
+    /**
+     * Обменивает параметр ?code=... из gitstorage://callback на рабочий токен GitHub
+     * и сразу загружает профиль пользователя (@login, имя, аватар).
+     */
+    public void exchangeOAuthCode(final String rawCode, final String rawState,
+                                  Callback<AuthResult> cb) {
+        final String code = rawCode == null ? "" : rawCode.trim();
+        final String secret = CLIENT_SECRET == null ? "" : CLIENT_SECRET.trim();
+        if (code.isEmpty()) {
+            post(cb, null, "GitHub не передал код авторизации");
+            return;
+        }
+        if (secret.isEmpty()) {
+            post(cb, null, "Вставьте ваш Client Secret в переменную CLIENT_SECRET в начале файла GitHubAccountManager.java");
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                FormBody.Builder formBuilder = new FormBody.Builder()
+                        .add("client_id", CLIENT_ID.trim())
+                        .add("client_secret", secret)
+                        .add("code", code)
+                        .add("redirect_uri", REDIRECT_URI);
+                if (rawState != null && !rawState.trim().isEmpty()) {
+                    formBuilder.add("state", rawState.trim());
+                }
+
+                Request req = new Request.Builder()
+                        .url("https://github.com/login/oauth/access_token")
+                        .header("Accept", "application/json")
+                        .header("User-Agent", "GitHubUploader/2.5")
+                        .post(formBuilder.build())
+                        .build();
+
+                try (Response resp = http.newCall(req).execute()) {
+                    String body = readBody(resp);
+                    JsonElement parsed = body.isEmpty() ? null : JsonParser.parseString(body);
+                    JsonObject obj = (parsed != null && parsed.isJsonObject())
+                            ? parsed.getAsJsonObject() : null;
+
+                    if (obj == null) {
+                        post(cb, null, "Некорректный ответ GitHub OAuth (HTTP " + resp.code() + ")");
+                        return;
+                    }
+
+                    String accessToken = str(obj, "access_token");
+                    if (!accessToken.isEmpty()) {
+                        GitHubUser user = fetchUserSync(accessToken);
+                        AuthResult res = new AuthResult();
+                        res.accessToken = accessToken;
+                        res.user = user;
+                        post(cb, res, null);
+                        return;
+                    }
+
+                    String err = str(obj, "error");
+                    if ("incorrect_client_credentials".equalsIgnoreCase(err)) {
+                        post(cb, null, "Неверный CLIENT_SECRET в GitHubAccountManager.java — проверьте скопированный ключ.");
+                    } else if ("redirect_uri_mismatch".equalsIgnoreCase(err)) {
+                        post(cb, null, "В настройках OAuth App на GitHub укажите Authorization callback URL: gitstorage://callback");
+                    } else if ("bad_verification_code".equalsIgnoreCase(err)) {
+                        post(cb, null, "Сессия входа устарела — нажмите «Авторизоваться через GitHub» ещё раз.");
+                    } else {
+                        String desc = str(obj, "error_description");
+                        post(cb, null, !desc.isEmpty() ? desc : ("Ошибка авторизации GitHub: " + err));
+                    }
+                }
+            } catch (ApiError ae) {
+                post(cb, null, ae.getMessage());
+            } catch (Exception e) {
+                String msg = e.getMessage();
+                post(cb, null, (msg == null || msg.isEmpty()) ? "Ошибка сети при завершении входа в GitHub" : msg);
+            }
+        }).start();
     }
 
     /** Шаг 1 Device Flow: запрашиваем user_code и verification_uri у GitHub. */
