@@ -62,10 +62,10 @@ public class RepoListAdapter extends RecyclerView.Adapter<RepoListAdapter.VH> {
                 && repo.name.equalsIgnoreCase(activeRepo)
                 && (activeOwner.isEmpty() || repo.owner.equalsIgnoreCase(activeOwner));
 
-        String chosenBranch = "files";
+        String chosenBranch = "main";
         if (config != null) {
             String fallback = isActive && config.previewBranch != null && !config.previewBranch.isEmpty()
-                    ? config.previewBranch : "files";
+                    ? config.previewBranch : "main";
             chosenBranch = config.getSavedBranchForRepo(repo.owner, repo.name, fallback);
         }
 

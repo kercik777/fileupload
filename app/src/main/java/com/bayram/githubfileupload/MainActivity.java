@@ -17,6 +17,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -70,6 +72,8 @@ public class MainActivity extends AppCompatActivity implements
     private TextView tvDownloadUrl;
     private TextView tvPreviewUrl;
     private TextInputEditText etTag;
+    private TextInputEditText etBranchFolder;
+    private boolean updatingInputsProgrammatically = false;
 
     private Boolean checkPermission1 = false;
     private GitHubConfig config;
@@ -144,12 +148,41 @@ public class MainActivity extends AppCompatActivity implements
         tvDownloadUrl = findViewById(R.id.tvDownloadUrl);
         tvPreviewUrl = findViewById(R.id.tvPreviewUrl);
         etTag = findViewById(R.id.etTag);
+        etBranchFolder = findViewById(R.id.etBranchFolder);
 
         config = Prefs.getConfig(this);
         config.syncActiveFromMode();
-        if (etTag.getText() == null || etTag.getText().toString().isEmpty()) {
-            etTag.setText(R.string.tag_default);
+
+        if (savedInstanceState == null) {
+            updatingInputsProgrammatically = true;
+            String savedTag = config.lastReleaseTag != null
+                    ? config.lastReleaseTag : getString(R.string.tag_default);
+            String savedFolder = config.lastBranchFolder != null
+                    ? config.lastBranchFolder : getString(R.string.branch_folder_default);
+            etTag.setText(savedTag);
+            etBranchFolder.setText(savedFolder);
+            updatingInputsProgrammatically = false;
         }
+
+        TextWatcher autoSaveWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (!updatingInputsProgrammatically) {
+                    persistMainInputs();
+                    updatePreviewHintText();
+                }
+            }
+        };
+        etTag.addTextChangedListener(autoSaveWatcher);
+        etBranchFolder.addTextChangedListener(autoSaveWatcher);
 
         findViewById(R.id.btnOnboardingOAuth).setOnClickListener(v ->
                 openConfigWithMode(GitHubConfig.MODE_OAUTH, true));
@@ -186,7 +219,7 @@ public class MainActivity extends AppCompatActivity implements
             return;
         }
         String currentBranch = (config.previewBranch == null || config.previewBranch.isEmpty())
-                ? "files" : config.previewBranch;
+                ? "main" : config.previewBranch;
         String defBranch = (config.branch == null || config.branch.isEmpty())
                 ? "main" : config.branch;
         BranchPickerDialogFragment.newInstance(
@@ -264,6 +297,12 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
+    protected void onPause() {
+        persistMainInputs();
+        super.onPause();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         refreshPermissionState();
@@ -272,6 +311,25 @@ public class MainActivity extends AppCompatActivity implements
         updateRepoConnectionUi();
         syncLastItemWithHistory();
         updateIdleStatus();
+    }
+
+    private void persistMainInputs() {
+        String rawTag = currentTagRaw();
+        String rawFolder = currentBranchFolderRaw();
+        if (config != null) {
+            config.lastReleaseTag = rawTag;
+            config.lastBranchFolder = rawFolder;
+        }
+        Prefs.saveUploadInputs(this, rawTag, rawFolder);
+    }
+
+    private String currentTagRaw() {
+        return (etTag == null || etTag.getText() == null) ? "" : etTag.getText().toString();
+    }
+
+    private String currentBranchFolderRaw() {
+        return (etBranchFolder == null || etBranchFolder.getText() == null)
+                ? "" : etBranchFolder.getText().toString();
     }
 
     private void updateRepoConnectionUi() {
@@ -283,13 +341,28 @@ public class MainActivity extends AppCompatActivity implements
                     config.owner + "/" + config.repo));
 
             String br = (config.previewBranch == null || config.previewBranch.trim().isEmpty())
-                    ? "files" : config.previewBranch.trim();
+                    ? "main" : config.previewBranch.trim();
             tvMainBranchName.setText(br);
-            tvPreviewBranchHint.setText(getString(R.string.main_branch_hint_dynamic, br));
+            updatePreviewHintText();
         } else {
             onboardingCard.setVisibility(View.VISIBLE);
             activeRepoBar.setVisibility(View.GONE);
             tvPreviewBranchHint.setText(R.string.config_hint_preview);
+        }
+    }
+
+    private void updatePreviewHintText() {
+        if (config == null || !config.isValid()) {
+            tvPreviewBranchHint.setText(R.string.config_hint_preview);
+            return;
+        }
+        String br = (config.previewBranch == null || config.previewBranch.trim().isEmpty())
+                ? "main" : config.previewBranch.trim();
+        String normFolder = GitHubRepoManager.normalizeFolderPath(currentBranchFolderRaw());
+        if (normFolder.isEmpty()) {
+            tvPreviewBranchHint.setText(getString(R.string.main_branch_hint_root_dynamic, br));
+        } else {
+            tvPreviewBranchHint.setText(getString(R.string.main_branch_hint_dynamic, br, normFolder));
         }
     }
 
@@ -502,9 +575,12 @@ public class MainActivity extends AppCompatActivity implements
         tvStatus.setText(R.string.status_uploading);
         tvIdleStatus.setVisibility(View.GONE);
 
+        persistMainInputs();
+
         final File file = pickedFile;
-        final String tag = etTag.getText() == null ? "latest" : etTag.getText().toString();
-        new UploadService().upload(config, file, pickedName, pickedMime, tag, mode,
+        final String tag = currentTagRaw().trim().isEmpty() ? "latest" : currentTagRaw().trim();
+        final String branchFolder = currentBranchFolderRaw();
+        new UploadService().upload(config, file, pickedName, pickedMime, tag, branchFolder, mode,
                 new UploadService.Callback() {
                     @Override
                     public void onProgress(int percent) {

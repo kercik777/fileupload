@@ -310,7 +310,7 @@ public class ConfigActivity extends AppCompatActivity implements
         etRepo.setText(cfg.manualRepo == null ? "" : cfg.manualRepo);
         etBranch.setText(cfg.manualBranch == null || cfg.manualBranch.isEmpty() ? "main" : cfg.manualBranch);
         String pBranch = (cfg.manualPreviewBranch == null || cfg.manualPreviewBranch.isEmpty())
-                ? "files" : cfg.manualPreviewBranch;
+                ? "main" : cfg.manualPreviewBranch;
         if (cfg.manualRepo != null && !cfg.manualRepo.isEmpty()) {
             pBranch = cfg.getSavedBranchForRepo(cfg.manualOwner, cfg.manualRepo, pBranch);
         }
@@ -325,7 +325,7 @@ public class ConfigActivity extends AppCompatActivity implements
         String br = textOf(etBranch);
         String pbr = GitHubAccountManager.sanitizeBranchName(textOf(etPreviewBranch));
         cfg.manualBranch = br.isEmpty() ? "main" : br;
-        cfg.manualPreviewBranch = pbr.isEmpty() ? "files" : pbr;
+        cfg.manualPreviewBranch = pbr.isEmpty() ? "main" : pbr;
         if (!parsed.repo.isEmpty()) {
             cfg.saveBranchForRepo(parsed.owner, parsed.repo, cfg.manualPreviewBranch);
         }
@@ -469,6 +469,7 @@ public class ConfigActivity extends AppCompatActivity implements
         cfg.oauthAvatarUrl = "";
         cfg.oauthRepo = "";
         cfg.oauthBranch = "main";
+        cfg.oauthPreviewBranch = "main";
         cfg.syncActiveFromMode();
         Prefs.saveConfig(this, cfg);
 
@@ -562,7 +563,7 @@ public class ConfigActivity extends AppCompatActivity implements
         if (repo == null) {
             return;
         }
-        String savedBranch = cfg.getSavedBranchForRepo(repo.owner, repo.name, "files");
+        String savedBranch = cfg.getSavedBranchForRepo(repo.owner, repo.name, "main");
 
         if (cfg.isOAuthMode()) {
             cfg.oauthOwner = repo.owner;

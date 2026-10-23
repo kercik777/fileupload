@@ -66,9 +66,9 @@ public class GitHubHistoryManager {
         final Context appCtx = ctx.getApplicationContext();
         new Thread(() -> {
             try {
-                List<UploadItem> releaseItems = fetchReleaseAssets(cfg);
-                List<UploadItem> previewItems = fetchPreviewBranchFiles(cfg);
                 List<UploadItem> localCache = Prefs.getHistoryForRepo(appCtx, cfg);
+                List<UploadItem> releaseItems = fetchReleaseAssets(cfg);
+                List<UploadItem> previewItems = fetchPreviewBranchFiles(cfg, localCache);
 
                 List<UploadItem> merged = mergeOnlineAndLocal(cfg, releaseItems, previewItems, localCache);
                 Prefs.replaceRepoHistory(appCtx, cfg, merged);
@@ -322,14 +322,16 @@ public class GitHubHistoryManager {
         }
     }
 
-    private List<UploadItem> fetchPreviewBranchFiles(GitHubConfig cfg) throws Exception {
+    private List<UploadItem> fetchPreviewBranchFiles(GitHubConfig cfg,
+                                                     List<UploadItem> localCache) throws Exception {
         String activeBranch = (cfg.previewBranch == null || cfg.previewBranch.trim().isEmpty())
-                ? "files" : cfg.previewBranch.trim();
+                ? "main" : cfg.previewBranch.trim();
 
-        // Сначала проверяем текущую активную ветку, затем остальные ветки репозитория
+        // Сначала проверяем текущую активную ветку (по умолчанию main), затем остальные ветки репозитория
         List<String> branchesToScan = new ArrayList<>();
         branchesToScan.add(activeBranch);
         addUniqueBranch(branchesToScan, cfg.branch);
+        addUniqueBranch(branchesToScan, "main");
         addUniqueBranch(branchesToScan, "files");
 
         HttpUrl brListUrl = new HttpUrl.Builder()
@@ -352,6 +354,17 @@ public class GitHubHistoryManager {
         } catch (Exception ignored) {
         }
 
+        // Собираем известные локальные пути и текущую папку на ветке, чтобы находить любые папки
+        java.util.Set<String> knownLocalPaths = new java.util.HashSet<>();
+        if (localCache != null) {
+            for (UploadItem loc : localCache) {
+                if (loc != null && loc.previewPath != null && !loc.previewPath.trim().isEmpty()) {
+                    knownLocalPaths.add(loc.previewPath.trim());
+                }
+            }
+        }
+        String customFolder = GitHubRepoManager.normalizeFolderPath(cfg.lastBranchFolder);
+
         List<UploadItem> result = new ArrayList<>();
         java.util.Set<String> seenPathSha = new java.util.HashSet<>();
 
@@ -360,8 +373,8 @@ public class GitHubHistoryManager {
             HttpUrl url = new HttpUrl.Builder()
                     .scheme("https")
                     .host("api.github.com")
-                    .addPathSegments("repos/" + cfg.owner + "/" + cfg.repo + "/contents/files")
-                    .addQueryParameter("ref", branch)
+                    .addPathSegments("repos/" + cfg.owner + "/" + cfg.repo + "/git/trees/" + branch)
+                    .addQueryParameter("recursive", "1")
                     .build();
 
             Request req = auth(cfg).url(url).get().build();
@@ -371,19 +384,39 @@ public class GitHubHistoryManager {
                 }
                 String body = readBody(resp);
                 JsonElement parsed = JsonParser.parseString(body);
-                if (!parsed.isJsonArray()) {
+                if (!parsed.isJsonObject()) {
                     continue;
                 }
-                JsonArray arr = parsed.getAsJsonArray();
+                JsonObject treeRoot = parsed.getAsJsonObject();
+                if (!treeRoot.has("tree") || !treeRoot.get("tree").isJsonArray()) {
+                    continue;
+                }
+                JsonArray arr = treeRoot.getAsJsonArray("tree");
                 for (JsonElement el : arr) {
                     if (!el.isJsonObject()) continue;
                     JsonObject f = el.getAsJsonObject();
-                    if (!"file".equalsIgnoreCase(str(f, "type"))) {
+                    if (!"blob".equalsIgnoreCase(str(f, "type"))) {
                         continue;
                     }
-                    String rawName = str(f, "name");
                     String path = str(f, "path");
                     if (path.isEmpty()) continue;
+
+                    int slash = path.lastIndexOf('/');
+                    String rawName = slash >= 0 ? path.substring(slash + 1) : path;
+                    if (isSystemRepoFile(rawName)) {
+                        continue;
+                    }
+
+                    long stampTime = FileUtils.parseTimestampPrefix(rawName);
+                    boolean inFilesDir = path.startsWith("files/");
+                    boolean inCustomDir = !customFolder.isEmpty() && path.startsWith(customFolder + "/");
+                    boolean inLocal = knownLocalPaths.contains(path);
+
+                    // Включаем все файлы приложения (с префиксом времени в любой папке/корне),
+                    // а также любые файлы внутри папки files/ или выбранной пользователем папки
+                    if (stampTime <= 0L && !inFilesDir && !inCustomDir && !inLocal) {
+                        continue;
+                    }
 
                     String sha = str(f, "sha");
                     String dedupeKey = path + "|" + sha;
@@ -392,8 +425,8 @@ public class GitHubHistoryManager {
                     }
 
                     String displayName = FileUtils.stripTimestampPrefix(rawName);
-                    long stampTime = FileUtils.parseTimestampPrefix(rawName);
-                    long size = f.has("size") ? f.get("size").getAsLong() : 0L;
+                    long size = f.has("size") && !f.get("size").isJsonNull()
+                            ? f.get("size").getAsLong() : 0L;
 
                     String enc = FileUtils.encodePath(path);
                     UploadItem it = new UploadItem();
@@ -418,6 +451,23 @@ public class GitHubHistoryManager {
             }
         }
         return result;
+    }
+
+    private static boolean isSystemRepoFile(String rawName) {
+        if (rawName == null || rawName.isEmpty()) {
+            return true;
+        }
+        if (FileUtils.parseTimestampPrefix(rawName) > 0L) {
+            return false;
+        }
+        String lower = rawName.toLowerCase(Locale.ROOT);
+        return "readme.md".equals(lower)
+                || "readme".equals(lower)
+                || "license".equals(lower)
+                || "license.md".equals(lower)
+                || ".gitignore".equals(lower)
+                || ".gitattributes".equals(lower)
+                || ".gitkeep".equals(lower);
     }
 
     private static void addUniqueBranch(List<String> target, String candidate) {

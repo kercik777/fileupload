@@ -23,6 +23,9 @@
     <string name="tag_label">Тег релиза</string>
     <string name="tag_hint">Например: latest</string>
     <string name="tag_default">latest</string>
+    <string name="branch_folder_label">Папка на ветке</string>
+    <string name="branch_folder_hint">Папка на ветке (пусто — в корень ветки)</string>
+    <string name="branch_folder_default">files</string>
     <string name="upload_button">Загрузить на GitHub</string>
     <string name="status_ready">Готово к загрузке</string>
     <string name="status_waiting">Выберите файл</string>
@@ -48,7 +51,7 @@
     <string name="menu_history">История</string>
     <string name="menu_settings">Настройки</string>
     <string name="about_text">GitHub Uploader — загружает файлы в релиз GitHub и даёт две ссылки: для скачивания и для просмотра прямо в браузере.</string>
-    <string name="version_label">Версия 2.5</string>
+    <string name="version_label">Версия 2.6</string>
     <string name="made_with">Сделано с ❤ в Zürich</string>
 
     <!-- File format picker dialog -->
@@ -96,7 +99,8 @@
     <string name="branch_cannot_delete_default">Основную ветку репозитория удалить нельзя</string>
     <string name="a11y_pick_branch">Выбрать или создать ветку</string>
     <string name="a11y_delete_branch">Удалить ветку</string>
-    <string name="main_branch_hint_dynamic">Файлы для просмотра загружаются в ветку «%1$s» выбранного репозитория.</string>
+    <string name="main_branch_hint_dynamic">Файлы для просмотра загружаются в ветку «%1$s» (папка: %2$s/).</string>
+    <string name="main_branch_hint_root_dynamic">Файлы для просмотра загружаются прямо в корень ветки «%1$s».</string>
 
     <!-- Settings: Modes & OAuth -->
     <string name="config_title">Настройки GitHub</string>
@@ -172,7 +176,7 @@
     <string name="config_branch_label">Основной бранч релиза</string>
     <string name="config_branch_default">main</string>
     <string name="config_preview_branch_label">Ветка для загрузки файлов (просмотр)</string>
-    <string name="config_preview_branch_default">files</string>
+    <string name="config_preview_branch_default">main</string>
     <string name="config_save">Сохранить</string>
     <string name="config_check">Проверить соединение</string>
     <string name="config_checking">Проверка…</string>

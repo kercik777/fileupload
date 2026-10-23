@@ -244,7 +244,7 @@
                         android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                         android:textColor="@color/md_on_primary_container"
                         android:textStyle="bold"
-                        tools:text="files" />
+                        tools:text="main" />
 
                     <ImageView
                         android:layout_width="20dp"
@@ -405,7 +405,34 @@
                             android:id="@+id/etTag"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:inputType="text"
+                            android:singleLine="true"
                             android:text="@string/tag_default"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="@string/branch_folder_label"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                        android:textColor="@color/md_primary" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:hint="@string/branch_folder_hint">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etBranchFolder"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text"
+                            android:singleLine="true"
+                            android:text="@string/branch_folder_default"
                             android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
                     </com.google.android.material.textfield.TextInputLayout>
 

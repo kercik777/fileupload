@@ -4,7 +4,7 @@ import java.io.File;
 
 /**
  * Оркестратор: по выбору пользователя выполняет
- * загрузку в релиз (скачивание) и/или в репозиторий (просмотр).
+ * загрузку в релиз (скачивание) и/или в выбранную ветку и папку репозитория (просмотр).
  */
 public class UploadService {
 
@@ -23,6 +23,13 @@ public class UploadService {
 
     public void upload(GitHubConfig cfg, File file, String fileName, String mime, String tag,
                        int mode, Callback cb) {
+        String folder = (cfg != null && cfg.lastBranchFolder != null)
+                ? cfg.lastBranchFolder : "files";
+        upload(cfg, file, fileName, mime, tag, folder, mode, cb);
+    }
+
+    public void upload(GitHubConfig cfg, File file, String fileName, String mime, String tag,
+                       String branchFolder, int mode, Callback cb) {
         if (!cfg.isValid()) {
             cb.onError("Сначала настройте репозиторий");
             return;
@@ -37,6 +44,7 @@ public class UploadService {
         run.fileName = fileName;
         run.mime = mime;
         run.tag = (tag == null || tag.trim().isEmpty()) ? "latest" : tag.trim();
+        run.branchFolder = branchFolder == null ? "" : branchFolder;
 
         boolean wantDownload = mode == MODE_DOWNLOAD || mode == MODE_BOTH;
         boolean wantPreview = mode == MODE_PREVIEW || mode == MODE_BOTH;
@@ -78,7 +86,8 @@ public class UploadService {
     private void doPreview(final GitHubConfig cfg, final Run run, final int startPct,
                            final int endPct, final Callback cb) {
         cb.onProgress(startPct);
-        String relPath = "files/" + FileUtils.uniqueName(run.fileName);
+        String relPath = GitHubRepoManager.buildBranchFilePath(
+                run.branchFolder, FileUtils.uniqueName(run.fileName));
         repos.upload(cfg, run.file, relPath, "Upload: " + run.fileName,
                 new GitHubRepoManager.Callback<GitHubRepoManager.PreviewResult>() {
                     @Override
@@ -134,6 +143,7 @@ public class UploadService {
         String fileName;
         String mime;
         String tag;
+        String branchFolder;
         String downloadUrl;
         long releaseId;
         long releaseAssetId;

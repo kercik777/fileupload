@@ -50,7 +50,7 @@ public class BranchPickerDialogFragment extends DialogFragment implements Branch
     private String owner = "";
     private String repo = "";
     private String token = "";
-    private String currentBranch = "files";
+    private String currentBranch = "main";
     private String defaultBranch = "main";
     private boolean busyAction = false;
 
@@ -65,8 +65,10 @@ public class BranchPickerDialogFragment extends DialogFragment implements Branch
         args.putString(ARG_OWNER, owner == null ? "" : owner.trim());
         args.putString(ARG_REPO, repo == null ? "" : repo.trim());
         args.putString(ARG_TOKEN, token == null ? "" : token.trim());
-        args.putString(ARG_CURRENT_BRANCH, currentBranch == null ? "files" : currentBranch.trim());
-        args.putString(ARG_DEFAULT_BRANCH, defaultBranch == null ? "main" : defaultBranch.trim());
+        args.putString(ARG_CURRENT_BRANCH, (currentBranch == null || currentBranch.trim().isEmpty())
+                ? "main" : currentBranch.trim());
+        args.putString(ARG_DEFAULT_BRANCH, (defaultBranch == null || defaultBranch.trim().isEmpty())
+                ? "main" : defaultBranch.trim());
         f.setArguments(args);
         return f;
     }
@@ -90,7 +92,7 @@ public class BranchPickerDialogFragment extends DialogFragment implements Branch
             owner = args.getString(ARG_OWNER, "");
             repo = args.getString(ARG_REPO, "");
             token = args.getString(ARG_TOKEN, "");
-            currentBranch = args.getString(ARG_CURRENT_BRANCH, "files");
+            currentBranch = args.getString(ARG_CURRENT_BRANCH, "main");
             defaultBranch = args.getString(ARG_DEFAULT_BRANCH, "main");
         }
 

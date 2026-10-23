@@ -164,7 +164,7 @@ public class GitHubRepoManager {
         final String targetPath = cleanPath;
         final String targetBranch = (branch == null || branch.trim().isEmpty())
                 ? ((cfg.previewBranch == null || cfg.previewBranch.trim().isEmpty())
-                ? "files" : cfg.previewBranch.trim())
+                ? "main" : cfg.previewBranch.trim())
                 : branch.trim();
 
         if (knownSha != null && !knownSha.trim().isEmpty()) {
@@ -295,10 +295,44 @@ public class GitHubRepoManager {
         return sb.toString();
     }
 
+    /** Очищает относительный путь папки на ветке (пустая строка = корень ветки). */
+    public static String normalizeFolderPath(String rawFolder) {
+        if (rawFolder == null) {
+            return "";
+        }
+        String cleaned = rawFolder.trim().replace('\\', '/');
+        String[] parts = cleaned.split("/");
+        StringBuilder sb = new StringBuilder();
+        for (String part : parts) {
+            String p = part.trim();
+            if (p.isEmpty() || ".".equals(p) || "..".equals(p)) {
+                continue;
+            }
+            p = p.replaceAll("[:*?\"<>|\\p{Cntrl}]", "_").trim();
+            if (p.isEmpty()) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append('/');
+            }
+            sb.append(p);
+        }
+        return sb.toString();
+    }
+
+    /** Формирует итоговый путь файла на ветке с учётом выбранной пользователем папки. */
+    public static String buildBranchFilePath(String rawFolder, String uniqueFileName) {
+        String folder = normalizeFolderPath(rawFolder);
+        if (folder.isEmpty()) {
+            return uniqueFileName;
+        }
+        return folder + "/" + uniqueFileName;
+    }
+
     private void ensureBranch(GitHubConfig cfg, String defaultBranch, String relativePath,
                               File file, String message, Callback<PreviewResult> cb) {
         final String preview = ((cfg.previewBranch == null || cfg.previewBranch.trim().isEmpty())
-                ? "files" : cfg.previewBranch).trim();
+                ? "main" : cfg.previewBranch).trim();
 
         if (preview.equalsIgnoreCase(defaultBranch)) {
             commit(cfg, preview, relativePath, file, message, cb);

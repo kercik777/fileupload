@@ -20,6 +20,7 @@ public final class Prefs {
     private static final String KEY_CONFIG = "config";
     private static final String KEY_HISTORY = "history";
     private static final String KEY_OAUTH_STATE = "oauth_pending_state";
+    private static final String KEY_MIGRATED_DEFAULT_MAIN_V26 = "migrated_default_main_v26";
     private static final int MAX_HISTORY = 200;
 
     private static final Gson GSON = new Gson();
@@ -34,8 +35,11 @@ public final class Prefs {
     public static GitHubConfig getConfig(Context ctx) {
         String json = sp(ctx).getString(KEY_CONFIG, null);
         if (json == null || json.isEmpty()) {
+            sp(ctx).edit().putBoolean(KEY_MIGRATED_DEFAULT_MAIN_V26, true).apply();
             GitHubConfig fresh = new GitHubConfig();
             fresh.authMode = GitHubConfig.MODE_OAUTH;
+            fresh.lastReleaseTag = "latest";
+            fresh.lastBranchFolder = "files";
             return fresh;
         }
         try {
@@ -43,17 +47,50 @@ public final class Prefs {
             if (cfg == null) {
                 GitHubConfig fresh = new GitHubConfig();
                 fresh.authMode = GitHubConfig.MODE_OAUTH;
+                fresh.lastReleaseTag = "latest";
+                fresh.lastBranchFolder = "files";
                 return fresh;
             }
             if (cfg.branch == null || cfg.branch.isEmpty()) {
                 cfg.branch = "main";
             }
             if (cfg.previewBranch == null || cfg.previewBranch.isEmpty()) {
-                cfg.previewBranch = "files";
+                cfg.previewBranch = "main";
             }
             if (cfg.savedRepoBranches == null) {
                 cfg.savedRepoBranches = new java.util.HashMap<>();
             }
+            if (cfg.lastReleaseTag == null) {
+                cfg.lastReleaseTag = "latest";
+            }
+            if (cfg.lastBranchFolder == null) {
+                cfg.lastBranchFolder = "files";
+            }
+
+            // Однократная миграция до v2.6: меняем старую авто-подставленную ветку "files" на "main"
+            if (!sp(ctx).getBoolean(KEY_MIGRATED_DEFAULT_MAIN_V26, false)) {
+                if ("files".equalsIgnoreCase(cfg.previewBranch)) {
+                    cfg.previewBranch = "main";
+                }
+                if (cfg.oauthPreviewBranch == null || cfg.oauthPreviewBranch.isEmpty()
+                        || "files".equalsIgnoreCase(cfg.oauthPreviewBranch)) {
+                    cfg.oauthPreviewBranch = "main";
+                }
+                if (cfg.manualPreviewBranch == null || cfg.manualPreviewBranch.isEmpty()
+                        || "files".equalsIgnoreCase(cfg.manualPreviewBranch)) {
+                    cfg.manualPreviewBranch = "main";
+                }
+                for (java.util.Map.Entry<String, String> entry : cfg.savedRepoBranches.entrySet()) {
+                    if ("files".equalsIgnoreCase(entry.getValue())) {
+                        entry.setValue("main");
+                    }
+                }
+                sp(ctx).edit()
+                        .putBoolean(KEY_MIGRATED_DEFAULT_MAIN_V26, true)
+                        .putString(KEY_CONFIG, GSON.toJson(cfg))
+                        .apply();
+            }
+
             if (cfg.repo != null && !cfg.repo.trim().isEmpty()) {
                 String existingSaved = cfg.getSavedBranchForRepo(cfg.owner, cfg.repo, "");
                 if (existingSaved.isEmpty()) {
@@ -89,6 +126,14 @@ public final class Prefs {
 
     public static void saveConfig(Context ctx, GitHubConfig cfg) {
         sp(ctx).edit().putString(KEY_CONFIG, GSON.toJson(cfg)).apply();
+    }
+
+    /** Автоматически сохраняет последние введённые на главном экране тег релиза и папку на ветке. */
+    public static void saveUploadInputs(Context ctx, String releaseTag, String branchFolder) {
+        GitHubConfig cfg = getConfig(ctx);
+        cfg.lastReleaseTag = releaseTag == null ? "" : releaseTag;
+        cfg.lastBranchFolder = branchFolder == null ? "" : branchFolder;
+        saveConfig(ctx, cfg);
     }
 
     public static List<UploadItem> getHistory(Context ctx) {

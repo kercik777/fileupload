@@ -5,8 +5,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Настройки GitHub-репозитория, режим авторизации и постоянное хранение выбранной ветки
- * для каждого репозитория.
+ * Настройки GitHub-репозитория, режим авторизации, постоянное хранение выбранной ветки
+ * (по умолчанию "main"), а также последних введённых тега релиза и папки на ветке.
  */
 public class GitHubConfig {
 
@@ -18,26 +18,30 @@ public class GitHubConfig {
     public String repo = "";
     public String token = "";
     public String branch = "main";
-    public String previewBranch = "files";
+    public String previewBranch = "main";
 
     // Выбранная вкладка в настройках: "oauth" или "manual"
     public String authMode = "";
 
-    // Сохранённые данные входа через GitHub OAuth (Device Flow)
+    // Сохранённые данные входа через GitHub OAuth
     public String oauthToken = "";
     public String oauthOwner = "";
     public String oauthName = "";
     public String oauthAvatarUrl = "";
     public String oauthRepo = "";
     public String oauthBranch = "main";
-    public String oauthPreviewBranch = "files";
+    public String oauthPreviewBranch = "main";
 
     // Сохранённые данные ручного режима (чтобы при переключении режимов ничего не терялось)
     public String manualToken = "";
     public String manualOwner = "";
     public String manualRepo = "";
     public String manualBranch = "main";
-    public String manualPreviewBranch = "files";
+    public String manualPreviewBranch = "main";
+
+    // Последние введённые на главном экране тег релиза и название папки на ветке
+    public String lastReleaseTag;
+    public String lastBranchFolder;
 
     // Индивидуально сохранённая ветка загрузки для каждого "owner/repo"
     public Map<String, String> savedRepoBranches = new HashMap<>();
@@ -65,7 +69,7 @@ public class GitHubConfig {
         return notEmpty(oauthToken) && notEmpty(oauthOwner);
     }
 
-    /** Возвращает сохранённую ветку для указанного репозитория (или fallback / "files"). */
+    /** Возвращает сохранённую ветку для указанного репозитория (по умолчанию "main"). */
     public String getSavedBranchForRepo(String repoOwner, String repoName, String fallback) {
         String key = repoKey(repoOwner, repoName);
         if (!key.isEmpty() && savedRepoBranches != null) {
@@ -74,7 +78,7 @@ public class GitHubConfig {
                 return saved.trim();
             }
         }
-        return notEmpty(fallback) ? fallback.trim() : "files";
+        return notEmpty(fallback) ? fallback.trim() : "main";
     }
 
     /** Сохраняет выбранную ветку для указанного репозитория и обновляет активные поля, если репо активен. */
@@ -112,7 +116,7 @@ public class GitHubConfig {
             this.owner = safe(oauthOwner);
             this.repo = safe(oauthRepo);
             this.branch = notEmpty(oauthBranch) ? oauthBranch.trim() : "main";
-            String fallback = notEmpty(oauthPreviewBranch) ? oauthPreviewBranch.trim() : "files";
+            String fallback = notEmpty(oauthPreviewBranch) ? oauthPreviewBranch.trim() : "main";
             this.previewBranch = getSavedBranchForRepo(this.owner, this.repo, fallback);
             this.oauthPreviewBranch = this.previewBranch;
         } else {
@@ -120,7 +124,7 @@ public class GitHubConfig {
             this.owner = safe(manualOwner);
             this.repo = safe(manualRepo);
             this.branch = notEmpty(manualBranch) ? manualBranch.trim() : "main";
-            String fallback = notEmpty(manualPreviewBranch) ? manualPreviewBranch.trim() : "files";
+            String fallback = notEmpty(manualPreviewBranch) ? manualPreviewBranch.trim() : "main";
             this.previewBranch = getSavedBranchForRepo(this.owner, this.repo, fallback);
             this.manualPreviewBranch = this.previewBranch;
         }
