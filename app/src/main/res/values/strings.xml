@@ -1,3 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name" translatable="false">GitHub upload files</string>
+    <string name="app_name" translatable="false">GitHub Uploader</string>
+
+    <!-- Screens -->
+    <string name="title_settings">Настройки</string>
+    <string name="title_history">История</string>
+    <string name="title_preview">Предпросмотр</string>
+    <string name="title_about">О приложении</string>
+
+    <!-- Main -->
+    <string name="hero_title">GitHub Uploader</string>
+    <string name="hero_subtitle">Загружайте файлы и получайте рабочие ссылки</string>
+    <string name="select_file">Выбрать файл</string>
+    <string name="select_file_hint">Фото, видео или любой другой файл</string>
+    <string name="file_not_selected">Файл не выбран</string>
+    <string name="change_file">Изменить</string>
+    <string name="tag_label">Тег релиза</string>
+    <string name="tag_hint">Например: latest</string>
+    <string name="tag_default">latest</string>
+    <string name="upload_button">Загрузить на GitHub</string>
+    <string name="status_ready">Готово к загрузке</string>
+    <string name="status_waiting">Выберите файл</string>
+    <string name="status_uploading">Загрузка…</string>
+    <string name="status_done">Готово! Ссылки готовы</string>
+    <string name="status_failed">Ошибка загрузки</string>
+    <string name="cancel">Отмена</string>
+    <string name="copy">Копировать</string>
+    <string name="open">Открыть</string>
+    <string name="share">Поделиться</string>
+    <string name="history">История</string>
+    <string name="settings">Настройки</string>
+    <string name="delete_release">Удалить релиз</string>
+    <string name="no_links">Ссылки появятся после загрузки</string>
+    <string name="download_label">Скачивание</string>
+    <string name="preview_label">Просмотр в браузере</string>
+    <string name="copied">Скопировано в буфер обмена</string>
+    <string name="copied_failed">Не удалось скопировать</string>
+    <string name="copied_nothing">Сначала выберите ссылку</string>
+    <string name="menu_history">История</string>
+    <string name="menu_settings">Настройки</string>
+    <string name="about_text">GitHub Uploader — загружает файлы в релиз GitHub и даёт две ссылки: для скачивания и для просмотра прямо в браузере.</string>
+    <string name="version_label">Версия 2.0</string>
+    <string name="made_with">Сделано с ❤ в Zürich</string>
+
+    <!-- Upload choice dialog -->
+    <string name="dialog_title_purpose">Для чего загружаете файл?</string>
+    <string name="dialog_subtitle">Выберите, какую ссылку получить</string>
+    <string name="option_download">Прямая ссылка для скачивания</string>
+    <string name="option_download_desc">Файл уходит в релиз GitHub, ссылка скачивает его</string>
+    <string name="option_preview">Ссылка для просмотра в браузере</string>
+    <string name="option_preview_desc">Файл попадает в репозиторий, друзья видят фото или видео прямо в браузере</string>
+    <string name="option_both">Оба варианта</string>
+    <string name="option_both_desc">Скачивание плюс просмотр — рекомендуется</string>
+
+    <!-- Settings -->
+    <string name="config_title">Настройки GitHub</string>
+    <string name="config_owner_label">Владелец</string>
+    <string name="config_owner_hint">Например: octocat</string>
+    <string name="config_repo_label">Репозиторий</string>
+    <string name="config_repo_hint">Например: my-storage</string>
+    <string name="config_token_label">Personal Access Token</string>
+    <string name="config_token_hint">Токен с правом repo</string>
+    <string name="config_branch_label">Бранч по умолчанию</string>
+    <string name="config_branch_default">main</string>
+    <string name="config_preview_branch_label">Бранч для предпросмотра</string>
+    <string name="config_preview_branch_default">files</string>
+    <string name="config_save">Сохранить</string>
+    <string name="config_check">Проверить соединение</string>
+    <string name="config_checking">Проверка…</string>
+    <string name="config_saved">Настройки сохранены</string>
+    <string name="config_connected">Соединение с GitHub установлено</string>
+    <string name="config_connected_as">Репозиторий доступен</string>
+    <string name="config_failed">Не удалось подключиться</string>
+    <string name="config_hint_token">Для работы нужен токен с правом repo (или public_repo для публичных репозиториев). Токен хранится только на устройстве.</string>
+    <string name="config_hint_preview">Файлы для просмотра уходят на отдельный бранч репозитория, оттуда работают прямые ссылки raw и CDN jsDelivr.</string>
+
+    <!-- History -->
+    <string name="history_empty">Пока нет загрузок</string>
+    <string name="history_clear">Очистить историю</string>
+    <string name="history_deleted">Запись удалена</string>
+    <string name="history_loaded_at">Загружено: %1$s</string>
+
+    <!-- Preview -->
+    <string name="preview_in_app">Предпросмотр</string>
+    <string name="preview_open_browser">Открыть в браузере</string>
+    <string name="preview_loading">Загрузка…</string>
+    <string name="preview_unsupported">Этот файл нельзя показать внутри приложения</string>
+    <string name="preview_use_browser">Открыть ссылку в браузере</string>
+
+    <!-- Errors -->
+    <string name="error_network">Ошибка сети</string>
+    <string name="error_not_configured">Сначала настройте репозиторий</string>
+    <string name="error_private_repo">Для приватного репозитория публичная ссылка на просмотр недоступна</string>
+    <string name="error_large_file">Файл слишком большой для предпросмотра (лимит репозитория 100 МБ)</string>
+    <string name="error_missing_file">Файл не найден</string>
+    <string name="retry">Повторить</string>
+
+    <string name="upload_mode_download">Скачивание</string>
+    <string name="upload_mode_preview">Просмотр</string>
+    <string name="upload_mode_both">Оба</string>
+    <string name="download_url_label">Ссылка для скачивания</string>
+    <string name="preview_url_label">Ссылка для просмотра</string>
+    <string name="asset_url_label">Актив</string>
 </resources>

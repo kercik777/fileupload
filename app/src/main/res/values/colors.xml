@@ -1,7 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<color name="colorPrimary">#1C6DFF</color>
-	<color name="colorPrimaryDark">#1C6DFF</color>
-	<color name="colorAccent">#1C6DFF</color>
-	<color name="colorControlHighlight">#DAE2FF</color>
-	<color name="colorControlNormal">#1C6DFF</color>
+    <!-- Brand -->
+    <color name="brand_start">#7C5CFF</color>
+    <color name="brand_end">#4FA8FF</color>
+    <color name="brand_solid">#6C4DF6</color>
+    <color name="brand_on">#FFFFFF</color>
+    <color name="launcher_bg">#6C4DF6</color>
+
+    <!-- Material 3 – Light -->
+    <color name="md_primary">#6C4DF6</color>
+    <color name="md_on_primary">#FFFFFF</color>
+    <color name="md_primary_container">#E8DEFF</color>
+    <color name="md_on_primary_container">#1B1440</color>
+    <color name="md_secondary">#5B5F72</color>
+    <color name="md_on_secondary">#FFFFFF</color>
+    <color name="md_secondary_container">#DFE2F9</color>
+    <color name="md_on_secondary_container">#181C2B</color>
+    <color name="md_tertiary">#B0497F</color>
+    <color name="md_on_tertiary">#FFFFFF</color>
+    <color name="md_tertiary_container">#FFD8E4</color>
+    <color name="md_on_tertiary_container">#40001E</color>
+    <color name="md_error">#BA1A1A</color>
+    <color name="md_on_error">#FFFFFF</color>
+    <color name="md_error_container">#FFDAD6</color>
+    <color name="md_on_error_container">#410002</color>
+    <color name="md_background">#FEF7FF</color>
+    <color name="md_on_background">#1D1B22</color>
+    <color name="md_surface">#FEF7FF</color>
+    <color name="md_on_surface">#1D1B22</color>
+    <color name="md_surface_variant">#E7E0EC</color>
+    <color name="md_on_surface_variant">#48454D</color>
+    <color name="md_surface_container_lowest">#FFFFFF</color>
+    <color name="md_surface_container_low">#F7F2FA</color>
+    <color name="md_surface_container">#F3EDF7</color>
+    <color name="md_surface_container_high">#ECE6F0</color>
+    <color name="md_surface_container_highest">#E6E0E9</color>
+    <color name="md_outline">#7A7585</color>
+    <color name="md_outline_variant">#CAC4D0</color>
+    <color name="md_scrim">#000000</color>
+    <color name="md_white">#FFFFFF</color>
+    <color name="md_black">#000000</color>
+
+    <!-- Status bar on gradient header -->
+    <color name="status_bar_gradient">#7C5CFF</color>
+    <color name="scrim_overlay">#80000000</color>
 </resources>

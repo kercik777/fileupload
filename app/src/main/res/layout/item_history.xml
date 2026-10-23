@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.GitHubUploader.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="52dp"
+                android:layout_height="52dp">
+
+                <ImageView
+                    android:id="@+id/itemIcon"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_insert_drive_file"
+                    app:tint="@color/md_primary" />
+
+                <ImageView
+                    android:id="@+id/itemThumb"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_thumb"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/itemName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                    android:textColor="@color/md_on_surface"
+                    android:textStyle="bold"
+                    tools:text="photo.jpg" />
+
+                <TextView
+                    android:id="@+id/itemMeta"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="@color/md_on_surface_variant"
+                    tools:text="1.2 МБ · скачивание" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_clock"
+                app:tint="@color/md_on_surface_variant" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/md_surface_container_high" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/itemCopyDownload"
+                style="@style/Widget.GitHubUploader.Button.Tonal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/copy"
+                app:icon="@drawable/ic_content_copy"
+                app:iconPadding="4dp"
+                app:iconSize="16dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/itemCopyPreview"
+                style="@style/Widget.GitHubUploader.Button.Tonal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/copy"
+                app:icon="@drawable/ic_content_copy"
+                app:iconPadding="4dp"
+                app:iconSize="16dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/itemDelete"
+                style="@style/Widget.GitHubUploader.Button.Tonal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/delete_release"
+                app:icon="@drawable/ic_trash"
+                app:iconPadding="4dp"
+                app:iconSize="16dp"
+                app:iconTint="@color/md_on_error" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/itemDownloadUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:fontFamily="monospace"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="@color/md_on_surface_variant"
+            tools:text="https://github.com/…/releases/download/…" />
+
+        <TextView
+            android:id="@+id/itemPreviewUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="monospace"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="@color/md_on_surface_variant"
+            tools:text="https://cdn.jsdelivr.net/gh/…@files/…" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
