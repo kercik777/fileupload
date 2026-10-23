@@ -43,6 +43,9 @@ public class MainActivity extends AppCompatActivity
     private static final int REQ_STORAGE_PERMISSION = 3000;
 
     private MaterialToolbar toolbar;
+    private View onboardingCard;
+    private View activeRepoBanner;
+    private TextView tvActiveRepoBanner;
     private View fileEmptyState;
     private View fileSelectedState;
     private ImageView fileIcon;
@@ -108,6 +111,10 @@ public class MainActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> openConfig());
 
+        onboardingCard = findViewById(R.id.onboardingCard);
+        activeRepoBanner = findViewById(R.id.activeRepoBanner);
+        tvActiveRepoBanner = findViewById(R.id.tvActiveRepoBanner);
+
         fileEmptyState = findViewById(R.id.fileEmptyState);
         fileSelectedState = findViewById(R.id.fileSelectedState);
         fileIcon = findViewById(R.id.fileIcon);
@@ -131,6 +138,10 @@ public class MainActivity extends AppCompatActivity
             etTag.setText(R.string.tag_default);
         }
 
+        findViewById(R.id.btnOnboardingOAuth).setOnClickListener(v -> openConfigWithMode(GitHubConfig.MODE_OAUTH, true));
+        findViewById(R.id.btnOnboardingManual).setOnClickListener(v -> openConfigWithMode(GitHubConfig.MODE_MANUAL, false));
+        activeRepoBanner.setOnClickListener(v -> openConfig());
+
         fileEmptyState.setOnClickListener(v -> showFormatDialog());
         findViewById(R.id.btnChangeFile).setOnClickListener(v -> showFormatDialog());
         btnUpload.setOnClickListener(v -> onUploadClick());
@@ -147,6 +158,7 @@ public class MainActivity extends AppCompatActivity
                 startActivity(new Intent(this, HistoryActivity.class)));
         findViewById(R.id.btnSettings).setOnClickListener(v -> openConfig());
 
+        updateRepoConnectionUi();
         updateIdleStatus();
         checkStoragePermissionOnEnter();
     }
@@ -159,7 +171,6 @@ public class MainActivity extends AppCompatActivity
     private void checkStoragePermissionOnEnter() {
         checkPermission1 = false;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // For Android 11+
             if (Environment.isExternalStorageManager()) {
                 checkPermission1 = true;
             } else {
@@ -177,7 +188,6 @@ public class MainActivity extends AppCompatActivity
                 }
             }
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // For Android 6 to 10
             if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     == PackageManager.PERMISSION_DENIED) {
                 requestPermissions(
@@ -220,8 +230,22 @@ public class MainActivity extends AppCompatActivity
         super.onResume();
         refreshPermissionState();
         config = Prefs.getConfig(this);
+        updateRepoConnectionUi();
         syncLastItemWithHistory();
         updateIdleStatus();
+    }
+
+    private void updateRepoConnectionUi() {
+        boolean configured = config != null && config.isValid();
+        if (configured) {
+            onboardingCard.setVisibility(View.GONE);
+            activeRepoBanner.setVisibility(View.VISIBLE);
+            tvActiveRepoBanner.setText(getString(R.string.active_repo_chip,
+                    config.owner + "/" + config.repo));
+        } else {
+            onboardingCard.setVisibility(View.VISIBLE);
+            activeRepoBanner.setVisibility(View.GONE);
+        }
     }
 
     /** Синхронизирует карточки последнего загруженного файла, если в Истории удалили одну или обе ссылки. */
@@ -542,6 +566,13 @@ public class MainActivity extends AppCompatActivity
 
     private void openConfig() {
         startActivity(new Intent(this, ConfigActivity.class));
+    }
+
+    private void openConfigWithMode(String mode, boolean autoStartOAuth) {
+        Intent i = new Intent(this, ConfigActivity.class);
+        i.putExtra(ConfigActivity.EXTRA_FORCE_MODE, mode);
+        i.putExtra(ConfigActivity.EXTRA_AUTO_START_OAUTH, autoStartOAuth);
+        startActivity(i);
     }
 
     private void toast(int resId) {

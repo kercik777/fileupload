@@ -1,0 +1,542 @@
+package com.bayram.githubfileupload;
+
+import android.os.Handler;
+import android.os.Looper;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import okhttp3.FormBody;
+import okhttp3.HttpUrl;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+
+/**
+ * Управление авторизацией через GitHub OAuth (Device Flow) и репозиториями аккаунта:
+ * - вход без собственного сервера по публичному Client ID;
+ * - автоматическое определение пользователя (@login, аватар) по любому токену;
+ * - загрузка полного списка репозиториев аккаунта;
+ * - создание нового публичного репозитория с README.md в один клик;
+ * - полное удаление репозитория вместе со всеми файлами и релизами.
+ */
+public class GitHubAccountManager {
+
+    public static final String CLIENT_ID = "Ov23licUnHLVbIdjeM2D";
+    public static final String OAUTH_SCOPES = "repo delete_repo";
+
+    private static final MediaType JSON_MT = MediaType.get("application/json; charset=utf-8");
+
+    public interface Callback<T> {
+        void onSuccess(T result);
+        void onError(String error);
+    }
+
+    public static class DeviceCodeInfo {
+        public String deviceCode = "";
+        public String userCode = "";
+        public String verificationUri = "https://github.com/login/device";
+        public int expiresIn = 900;
+        public int interval = 5;
+    }
+
+    public static class GitHubUser {
+        public String login = "";
+        public String name = "";
+        public String avatarUrl = "";
+    }
+
+    public static class AuthResult {
+        public String accessToken = "";
+        public GitHubUser user = new GitHubUser();
+    }
+
+    public static class UserRepo {
+        public String owner = "";
+        public String name = "";
+        public String fullName = "";
+        public String defaultBranch = "main";
+        public boolean privateRepo;
+        public String description = "";
+    }
+
+    public static class TokenReposResult {
+        public GitHubUser user = new GitHubUser();
+        public List<UserRepo> repos = new ArrayList<>();
+    }
+
+    /** Управляемая сессия опроса OAuth-токена для Device Flow. */
+    public final class PollSession {
+        private final String deviceCode;
+        private volatile int intervalSec;
+        private final Callback<AuthResult> callback;
+        private final AtomicBoolean cancelled = new AtomicBoolean(false);
+        private final AtomicBoolean inFlight = new AtomicBoolean(false);
+        private final Runnable scheduledTick = this::executeSinglePoll;
+
+        PollSession(String deviceCode, int initialIntervalSec, Callback<AuthResult> callback) {
+            this.deviceCode = deviceCode;
+            this.intervalSec = Math.max(5, initialIntervalSec);
+            this.callback = callback;
+        }
+
+        void start() {
+            scheduleNext(intervalSec);
+        }
+
+        private void scheduleNext(int delaySec) {
+            if (cancelled.get()) {
+                return;
+            }
+            ui.removeCallbacks(scheduledTick);
+            ui.postDelayed(scheduledTick, Math.max(1, delaySec) * 1000L);
+        }
+
+        /** Вызывается при возврате пользователя из браузера, чтобы проверить вход мгновенно. */
+        public void pollNow() {
+            if (cancelled.get()) {
+                return;
+            }
+            ui.removeCallbacks(scheduledTick);
+            executeSinglePoll();
+        }
+
+        public void cancel() {
+            cancelled.set(true);
+            ui.removeCallbacks(scheduledTick);
+        }
+
+        private void executeSinglePoll() {
+            if (cancelled.get() || !inFlight.compareAndSet(false, true)) {
+                return;
+            }
+            new Thread(() -> {
+                try {
+                    FormBody form = new FormBody.Builder()
+                            .add("client_id", CLIENT_ID)
+                            .add("device_code", deviceCode)
+                            .add("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
+                            .build();
+
+                    Request req = new Request.Builder()
+                            .url("https://github.com/login/oauth/access_token")
+                            .header("Accept", "application/json")
+                            .header("User-Agent", "GitHubUploader/2.3")
+                            .post(form)
+                            .build();
+
+                    try (Response resp = http.newCall(req).execute()) {
+                        String body = readBody(resp);
+                        JsonElement el = JsonParser.parseString(body);
+                        if (!el.isJsonObject()) {
+                            scheduleNext(intervalSec);
+                            return;
+                        }
+                        JsonObject obj = el.getAsJsonObject();
+                        String accessToken = str(obj, "access_token");
+                        if (!accessToken.isEmpty()) {
+                            GitHubUser user = fetchUserSync(accessToken);
+                            if (cancelled.compareAndSet(false, true)) {
+                                AuthResult res = new AuthResult();
+                                res.accessToken = accessToken;
+                                res.user = user;
+                                ui.post(() -> callback.onSuccess(res));
+                            }
+                            return;
+                        }
+
+                        String err = str(obj, "error");
+                        if ("authorization_pending".equalsIgnoreCase(err)) {
+                            scheduleNext(intervalSec);
+                        } else if ("slow_down".equalsIgnoreCase(err)) {
+                            if (obj.has("interval") && !obj.get("interval").isJsonNull()) {
+                                intervalSec = Math.max(intervalSec + 5, obj.get("interval").getAsInt());
+                            } else {
+                                intervalSec += 5;
+                            }
+                            scheduleNext(intervalSec);
+                        } else if ("expired_token".equalsIgnoreCase(err)) {
+                            failAndStop("Время действия кода истекло. Запросите новый код.");
+                        } else if ("access_denied".equalsIgnoreCase(err)) {
+                            failAndStop("Авторизация отклонена в браузере.");
+                        } else if ("device_flow_disabled".equalsIgnoreCase(err)) {
+                            failAndStop("В настройках OAuth App на GitHub включите галочку «Enable Device Flow» и нажмите Update application.");
+                        } else {
+                            String desc = str(obj, "error_description");
+                            failAndStop(!desc.isEmpty() ? desc : ("Ошибка авторизации: " + err));
+                        }
+                    }
+                } catch (Exception e) {
+                    // Если сеть кратковременно прервалась при переключении браузер <-> приложение, продолжаем опрос
+                    scheduleNext(intervalSec);
+                } finally {
+                    inFlight.set(false);
+                }
+            }).start();
+        }
+
+        private void failAndStop(final String message) {
+            if (cancelled.compareAndSet(false, true)) {
+                ui.removeCallbacks(scheduledTick);
+                ui.post(() -> callback.onError(message));
+            }
+        }
+    }
+
+    private final OkHttpClient http;
+    private final Handler ui;
+
+    public GitHubAccountManager() {
+        http = new OkHttpClient.Builder()
+                .connectTimeout(25, TimeUnit.SECONDS)
+                .readTimeout(35, TimeUnit.SECONDS)
+                .build();
+        ui = new Handler(Looper.getMainLooper());
+    }
+
+    /** Шаг 1 Device Flow: запрашиваем user_code и verification_uri у GitHub. */
+    public void requestDeviceCode(Callback<DeviceCodeInfo> cb) {
+        new Thread(() -> {
+            try {
+                FormBody form = new FormBody.Builder()
+                        .add("client_id", CLIENT_ID)
+                        .add("scope", OAUTH_SCOPES)
+                        .build();
+
+                Request req = new Request.Builder()
+                        .url("https://github.com/login/device/code")
+                        .header("Accept", "application/json")
+                        .header("User-Agent", "GitHubUploader/2.3")
+                        .post(form)
+                        .build();
+
+                try (Response resp = http.newCall(req).execute()) {
+                    String body = readBody(resp);
+                    JsonElement parsed = body.isEmpty() ? null : JsonParser.parseString(body);
+                    JsonObject obj = (parsed != null && parsed.isJsonObject())
+                            ? parsed.getAsJsonObject() : null;
+
+                    if (obj != null && obj.has("error")) {
+                        String err = str(obj, "error");
+                        if ("device_flow_disabled".equalsIgnoreCase(err)) {
+                            post(cb, null, "В настройках вашего OAuth App на GitHub нужно включить галочку «Enable Device Flow» и нажать Update application.");
+                            return;
+                        }
+                        String desc = str(obj, "error_description");
+                        post(cb, null, !desc.isEmpty() ? desc : ("Ошибка GitHub OAuth: " + err));
+                        return;
+                    }
+
+                    if (!resp.isSuccessful() || obj == null) {
+                        post(cb, null, "Не удалось получить код входа (HTTP " + resp.code() + ")");
+                        return;
+                    }
+
+                    DeviceCodeInfo info = new DeviceCodeInfo();
+                    info.deviceCode = str(obj, "device_code");
+                    info.userCode = str(obj, "user_code");
+                    String uri = str(obj, "verification_uri");
+                    if (!uri.isEmpty()) {
+                        info.verificationUri = uri;
+                    }
+                    if (obj.has("expires_in") && !obj.get("expires_in").isJsonNull()) {
+                        info.expiresIn = obj.get("expires_in").getAsInt();
+                    }
+                    if (obj.has("interval") && !obj.get("interval").isJsonNull()) {
+                        info.interval = Math.max(5, obj.get("interval").getAsInt());
+                    }
+                    if (info.deviceCode.isEmpty() || info.userCode.isEmpty()) {
+                        post(cb, null, "GitHub вернул пустой код авторизации");
+                        return;
+                    }
+                    post(cb, info, null);
+                }
+            } catch (Exception e) {
+                String msg = e.getMessage();
+                post(cb, null, (msg == null || msg.isEmpty()) ? "Ошибка сети при подключении к GitHub" : msg);
+            }
+        }).start();
+    }
+
+    /** Шаг 2 Device Flow: запускаем фоновый опрос получения токена. */
+    public PollSession startPollingToken(DeviceCodeInfo info, Callback<AuthResult> cb) {
+        PollSession session = new PollSession(info.deviceCode, info.interval, cb);
+        session.start();
+        return session;
+    }
+
+    /**
+     * Загружает профиль владельца токена (@login, аватар) и полный список всех его репозиториев.
+     * Работает и для OAuth-токена, и для ручного Personal Access Token!
+     */
+    public void loadUserAndRepos(final String rawToken, Callback<TokenReposResult> cb) {
+        final String token = rawToken == null ? "" : rawToken.trim();
+        if (token.isEmpty()) {
+            post(cb, null, "Токен не указан");
+            return;
+        }
+        new Thread(() -> {
+            try {
+                GitHubUser user = fetchUserSync(token);
+                List<UserRepo> repos = new ArrayList<>();
+
+                for (int page = 1; page <= 2; page++) {
+                    HttpUrl url = new HttpUrl.Builder()
+                            .scheme("https")
+                            .host("api.github.com")
+                            .addPathSegments("user/repos")
+                            .addQueryParameter("affiliation", "owner")
+                            .addQueryParameter("sort", "updated")
+                            .addQueryParameter("direction", "desc")
+                            .addQueryParameter("per_page", "100")
+                            .addQueryParameter("page", String.valueOf(page))
+                            .build();
+
+                    Request req = apiAuth(token).url(url).get().build();
+                    try (Response resp = http.newCall(req).execute()) {
+                        if (resp.code() == 401) {
+                            throw new ApiError("Неверный или просроченный токен GitHub (HTTP 401)");
+                        }
+                        if (!resp.isSuccessful()) {
+                            throw new ApiError("Не удалось загрузить репозитории: HTTP " + resp.code());
+                        }
+                        JsonElement el = JsonParser.parseString(readBody(resp));
+                        if (!el.isJsonArray()) {
+                            break;
+                        }
+                        JsonArray arr = el.getAsJsonArray();
+                        for (JsonElement item : arr) {
+                            if (!item.isJsonObject()) continue;
+                            repos.add(parseRepo(item.getAsJsonObject(), user.login));
+                        }
+                        if (arr.size() < 100) {
+                            break;
+                        }
+                    }
+                }
+
+                TokenReposResult out = new TokenReposResult();
+                out.user = user;
+                out.repos = repos;
+                post(cb, out, null);
+            } catch (ApiError ae) {
+                post(cb, null, ae.getMessage());
+            } catch (Exception e) {
+                String msg = e.getMessage();
+                post(cb, null, (msg == null || msg.isEmpty()) ? "Ошибка сети при загрузке репозиториев" : msg);
+            }
+        }).start();
+    }
+
+    /**
+     * Создаёт новый публичный репозиторий с README.md (auto_init: true),
+     * сразу готовый к загрузке в Releases и ветку предпросмотра.
+     */
+    public void createPublicRepo(final String rawToken, final String rawRepoName, Callback<UserRepo> cb) {
+        final String token = rawToken == null ? "" : rawToken.trim();
+        final String cleanName = sanitizeRepoName(rawRepoName);
+        if (token.isEmpty()) {
+            post(cb, null, "Сначала авторизуйтесь или введите токен");
+            return;
+        }
+        if (cleanName.isEmpty()) {
+            post(cb, null, "Введите корректное имя репозитория (латиницей или цифрами)");
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                JsonObject body = new JsonObject();
+                body.addProperty("name", cleanName);
+                body.addProperty("description", "File storage created via GitHub Uploader");
+                body.addProperty("private", false);
+                body.addProperty("auto_init", true);
+
+                Request req = apiAuth(token)
+                        .url("https://api.github.com/user/repos")
+                        .post(RequestBody.create(JSON_MT, body.toString()))
+                        .build();
+
+                try (Response resp = http.newCall(req).execute()) {
+                    String respBody = readBody(resp);
+                    if (resp.isSuccessful()) {
+                        JsonObject obj = JsonParser.parseString(respBody).getAsJsonObject();
+                        UserRepo created = parseRepo(obj, "");
+                        post(cb, created, null);
+                        return;
+                    }
+                    if (resp.code() == 422) {
+                        if (respBody.toLowerCase().contains("already exists")) {
+                            post(cb, null, "Репозиторий «" + cleanName + "» уже существует в вашем аккаунте");
+                        } else {
+                            post(cb, null, "Недопустимое имя репозитория «" + cleanName + "» (HTTP 422)");
+                        }
+                        return;
+                    }
+                    if (resp.code() == 401 || resp.code() == 403) {
+                        post(cb, null, "У токена нет прав на создание репозитория (нужно право repo / public_repo)");
+                        return;
+                    }
+                    post(cb, null, "Ошибка создания репозитория: HTTP " + resp.code());
+                }
+            } catch (Exception e) {
+                String msg = e.getMessage();
+                post(cb, null, (msg == null || msg.isEmpty()) ? "Ошибка сети при создании репозитория" : msg);
+            }
+        }).start();
+    }
+
+    /**
+     * Полностью удаляет репозиторий вместе со всеми загруженными файлами, ветками и релизами.
+     */
+    public void deleteRepo(final String rawToken, final String owner, final String repo,
+                           Callback<Boolean> cb) {
+        final String token = rawToken == null ? "" : rawToken.trim();
+        if (token.isEmpty() || owner == null || owner.isEmpty() || repo == null || repo.isEmpty()) {
+            post(cb, null, "Не указаны данные репозитория для удаления");
+            return;
+        }
+        new Thread(() -> {
+            try {
+                HttpUrl url = new HttpUrl.Builder()
+                        .scheme("https")
+                        .host("api.github.com")
+                        .addPathSegments("repos/" + owner.trim() + "/" + repo.trim())
+                        .build();
+
+                Request req = apiAuth(token).url(url).delete().build();
+                try (Response resp = http.newCall(req).execute()) {
+                    if (resp.code() == 204 || resp.code() == 404 || resp.isSuccessful()) {
+                        post(cb, true, null);
+                        return;
+                    }
+                    if (resp.code() == 403) {
+                        post(cb, null, "У этого токена нет права delete_repo. Войдите через вкладку «Через GitHub» или включите галочку delete_repo у токена.");
+                        return;
+                    }
+                    if (resp.code() == 401) {
+                        post(cb, null, "Неверный или просроченный токен (HTTP 401)");
+                        return;
+                    }
+                    post(cb, null, "Ошибка удаления репозитория: HTTP " + resp.code());
+                }
+            } catch (Exception e) {
+                String msg = e.getMessage();
+                post(cb, null, (msg == null || msg.isEmpty()) ? "Ошибка сети при удалении репозитория" : msg);
+            }
+        }).start();
+    }
+
+    public static String sanitizeRepoName(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String s = raw.trim().replace(' ', '-');
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if ((c >= 'a' && c <= 'z')
+                    || (c >= 'A' && c <= 'Z')
+                    || (c >= '0' && c <= '9')
+                    || c == '-' || c == '_' || c == '.') {
+                out.append(c);
+            }
+        }
+        String res = out.toString();
+        while (res.startsWith(".") || res.startsWith("-")) {
+            res = res.substring(1);
+        }
+        if (res.endsWith(".git")) {
+            res = res.substring(0, res.length() - 4);
+        }
+        return res;
+    }
+
+    private GitHubUser fetchUserSync(String token) throws Exception {
+        Request req = apiAuth(token)
+                .url("https://api.github.com/user")
+                .get()
+                .build();
+        try (Response resp = http.newCall(req).execute()) {
+            if (resp.code() == 401) {
+                throw new ApiError("Неверный токен или доступ отозван (HTTP 401)");
+            }
+            if (!resp.isSuccessful()) {
+                throw new ApiError("Ошибка получения профиля GitHub: HTTP " + resp.code());
+            }
+            JsonObject obj = JsonParser.parseString(readBody(resp)).getAsJsonObject();
+            GitHubUser u = new GitHubUser();
+            u.login = str(obj, "login");
+            u.name = str(obj, "name");
+            u.avatarUrl = str(obj, "avatar_url");
+            return u;
+        }
+    }
+
+    private static UserRepo parseRepo(JsonObject obj, String fallbackOwner) {
+        UserRepo r = new UserRepo();
+        r.name = str(obj, "name");
+        r.fullName = str(obj, "full_name");
+        if (obj.has("owner") && obj.get("owner").isJsonObject()) {
+            r.owner = str(obj.getAsJsonObject("owner"), "login");
+        }
+        if (r.owner.isEmpty()) {
+            r.owner = fallbackOwner == null ? "" : fallbackOwner;
+        }
+        String defBranch = str(obj, "default_branch");
+        r.defaultBranch = defBranch.isEmpty() ? "main" : defBranch;
+        r.privateRepo = obj.has("private") && !obj.get("private").isJsonNull()
+                && obj.get("private").getAsBoolean();
+        r.description = str(obj, "description");
+        return r;
+    }
+
+    private Request.Builder apiAuth(String token) {
+        return new Request.Builder()
+                .header("Authorization", "Bearer " + token)
+                .header("Accept", "application/vnd.github+json")
+                .header("User-Agent", "GitHubUploader/2.3");
+    }
+
+    private static String str(JsonObject o, String key) {
+        if (o == null || !o.has(key) || o.get(key).isJsonNull()) {
+            return "";
+        }
+        return o.get(key).getAsString();
+    }
+
+    private static String readBody(Response response) {
+        try {
+            ResponseBody b = response.body();
+            return b == null ? "" : b.string();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private <T> void post(Callback<T> cb, T result, String error) {
+        ui.post(() -> {
+            if (error != null) {
+                cb.onError(error);
+            } else {
+                cb.onSuccess(result);
+            }
+        });
+    }
+
+    private static final class ApiError extends Exception {
+        ApiError(String msg) {
+            super(msg);
+        }
+    }
+}

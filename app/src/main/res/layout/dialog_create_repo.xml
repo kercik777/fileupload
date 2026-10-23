@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card_surface"
+    android:orientation="vertical"
+    android:padding="22dp">
+
+    <LinearLayout
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_thumb"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_folder"
+            app:tint="@color/md_primary" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:text="@string/create_repo_title"
+        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+        android:textColor="@color/md_on_surface"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:text="@string/create_repo_subtitle"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:textColor="@color/md_on_surface_variant" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="@string/create_repo_name_hint"
+        app:startIconDrawable="@drawable/ic_folder"
+        app:startIconTint="@color/md_primary">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etNewRepoName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:singleLine="true"
+            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <Button
+        android:id="@+id/btnConfirmCreateRepo"
+        style="@style/Widget.GitHubUploader.GradientButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/create_repo_confirm" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCancelCreateRepo"
+        style="@style/Widget.GitHubUploader.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/cancel" />
+</LinearLayout>

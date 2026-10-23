@@ -11,6 +11,11 @@
     <!-- Main -->
     <string name="hero_title">GitHub Uploader</string>
     <string name="hero_subtitle">Загружайте файлы и получайте рабочие ссылки</string>
+    <string name="onboarding_title">Подключите GitHub за 10 секунд</string>
+    <string name="onboarding_subtitle">Войдите через GitHub — приложение само получит токен, покажет ваши репозитории или создаст новый в один клик.</string>
+    <string name="onboarding_login_github">Войти через GitHub</string>
+    <string name="onboarding_manual_token">Ввести токен вручную</string>
+    <string name="active_repo_chip">Активный репозиторий: %1$s</string>
     <string name="select_file">Выбрать файл</string>
     <string name="select_file_hint">Фотография, видео или любой файл</string>
     <string name="file_not_selected">Файл не выбран</string>
@@ -41,7 +46,7 @@
     <string name="menu_history">История</string>
     <string name="menu_settings">Настройки</string>
     <string name="about_text">GitHub Uploader — загружает файлы в релиз GitHub и даёт две ссылки: для скачивания и для просмотра прямо в браузере.</string>
-    <string name="version_label">Версия 2.2</string>
+    <string name="version_label">Версия 2.3</string>
     <string name="made_with">Сделано с ❤ в Zürich</string>
 
     <!-- File format picker dialog -->
@@ -61,8 +66,66 @@
     <string name="option_both">Оба варианта</string>
     <string name="option_both_desc">Скачивание плюс просмотр — рекомендуется</string>
 
-    <!-- Settings -->
+    <!-- Settings: Modes & OAuth -->
     <string name="config_title">Настройки GitHub</string>
+    <string name="mode_tab_oauth">Через GitHub</string>
+    <string name="mode_tab_manual">Ручной режим</string>
+    <string name="oauth_card_title">Вход через GitHub</string>
+    <string name="oauth_card_subtitle">Авторизуйтесь без ручного создания токена: выбирайте любой свой репозиторий или создавайте новый прямо в приложении.</string>
+    <string name="oauth_btn_login">Авторизоваться через GitHub</string>
+    <string name="oauth_logged_in_badge">Аккаунт подключён</string>
+    <string name="oauth_logout">Выйти</string>
+    <string name="oauth_logout_done">Вы вышли из аккаунта GitHub</string>
+
+    <!-- Device Flow Auth Dialog -->
+    <string name="device_auth_title">Вход в GitHub</string>
+    <string name="device_auth_loading">Запрашиваем код входа у GitHub…</string>
+    <string name="device_auth_instruction">1. Код ниже уже скопирован в буфер обмена.\n2. Нажмите «Открыть GitHub», вставьте код и нажмите Authorize.</string>
+    <string name="device_auth_code_copied">Код скопирован: %1$s</string>
+    <string name="device_auth_open_browser">Открыть GitHub и подтвердить</string>
+    <string name="device_auth_waiting">Ожидаем подтверждения в браузере…</string>
+    <string name="device_auth_expired">Время действия кода истекло. Попробуйте снова.</string>
+    <string name="device_auth_denied">Вход отменён пользователем.</string>
+    <string name="device_auth_disabled_hint">В настройках вашего OAuth App на GitHub включите галочку «Enable Device Flow» и нажмите Update application.</string>
+    <string name="device_auth_success">Вход выполнен: @%1$s</string>
+
+    <!-- Repositories List, Create & Delete -->
+    <string name="repos_section_title">Мои репозитории</string>
+    <string name="repos_section_hint">Нажмите на репозиторий, чтобы выбрать его для загрузки файлов</string>
+    <string name="repos_create_btn">Создать репозиторий</string>
+    <string name="repos_loading">Загружаем список репозиториев…</string>
+    <string name="repos_empty_oauth">У вас пока нет ни одного репозитория.\nНажмите «Создать репозиторий» выше — и хранилище будет готово!</string>
+    <string name="repos_empty_manual">Для этого токена пока нет репозиториев.\nСоздайте новый кнопкой выше или укажите данные ниже вручную.</string>
+    <string name="repo_active_badge">Выбран</string>
+    <string name="repo_public_badge">Публичный</string>
+    <string name="repo_private_badge">Приватный</string>
+    <string name="repo_selected_toast">Активный репозиторий: %1$s</string>
+    <string name="a11y_delete_repo">Удалить репозиторий полностью</string>
+
+    <!-- Create Repo Dialog -->
+    <string name="create_repo_title">Новый репозиторий</string>
+    <string name="create_repo_subtitle">Создаст публичный репозиторий с README.md, сразу готовый к загрузке и просмотру файлов</string>
+    <string name="create_repo_name_hint">Название (например: my-files)</string>
+    <string name="create_repo_confirm">Создать</string>
+    <string name="create_repo_creating">Создаём репозиторий…</string>
+    <string name="create_repo_success">Репозиторий %1$s создан и выбран!</string>
+    <string name="create_repo_invalid_name">Введите название репозитория латиницей или цифрами</string>
+    <string name="create_repo_exists">Репозиторий с таким именем уже существует</string>
+
+    <!-- Delete Repo Dialog -->
+    <string name="delete_repo_title">Удалить репозиторий?</string>
+    <string name="delete_repo_warning">Репозиторий и ВСЕ загруженные в него файлы, релизы и ссылки будут удалены с GitHub навсегда без возможности восстановления.</string>
+    <string name="delete_repo_confirm">Удалить репозиторий и все файлы</string>
+    <string name="delete_repo_deleting">Удаляем репозиторий %1$s…</string>
+    <string name="delete_repo_success">Репозиторий %1$s полностью удалён</string>
+    <string name="delete_repo_no_scope">У этого токена нет права delete_repo. Войдите через вкладку «Через GitHub» или включите галочку delete_repo у токена.</string>
+
+    <!-- Manual Mode -->
+    <string name="manual_token_card_title">Быстрый выбор по токену</string>
+    <string name="manual_token_hint_fast">Укажите только токен и нажмите кнопку ниже — приложение само определит аккаунт и покажет все его репозитории.</string>
+    <string name="manual_load_repos_btn">Показать репозитории токена</string>
+    <string name="manual_enter_token_first">Сначала введите Personal Access Token</string>
+    <string name="manual_advanced_title">Параметры репозитория вручную</string>
     <string name="config_owner_label">Владелец</string>
     <string name="config_owner_hint">Например: octocat</string>
     <string name="config_repo_label">Репозиторий</string>
@@ -80,13 +143,13 @@
     <string name="config_connected">Соединение с GitHub установлено</string>
     <string name="config_connected_as">Репозиторий доступен</string>
     <string name="config_failed">Не удалось подключиться</string>
-    <string name="config_hint_token">Для работы нужен токен с правом repo (или public_repo для публичных репозиториев). Токен хранится только на устройстве.</string>
+    <string name="config_hint_token">Для работы нужен токен с правом repo (и delete_repo, если хотите удалять репозитории). Токен хранится только на устройстве.</string>
     <string name="config_hint_preview">Файлы для просмотра уходят на отдельный бранч репозитория, оттуда работают прямые ссылки raw и CDN jsDelivr.</string>
 
     <!-- History (Online + Smart Delete) -->
     <string name="history_empty">В репозитории пока нет загруженных файлов</string>
     <string name="history_loading">Загрузка истории из GitHub…</string>
-    <string name="history_need_config">Укажите владельца, репозиторий и токен в настройках, чтобы загрузить все ваши файлы из GitHub</string>
+    <string name="history_need_config">Войдите через GitHub или укажите токен в настройках, чтобы загрузить все ваши файлы</string>
     <string name="history_open_settings">Открыть настройки</string>
     <string name="history_refresh">Обновить</string>
     <string name="history_clear">Очистить локальный кэш</string>
@@ -121,7 +184,7 @@
 
     <!-- Errors -->
     <string name="error_network">Ошибка сети</string>
-    <string name="error_not_configured">Сначала настройте репозиторий</string>
+    <string name="error_not_configured">Сначала выберите или создайте репозиторий в настройках</string>
     <string name="error_private_repo">Для приватного репозитория публичная ссылка на просмотр недоступна</string>
     <string name="error_large_file">Файл слишком большой для предпросмотра (лимит репозитория 100 МБ)</string>
     <string name="error_missing_file">Файл не найден</string>

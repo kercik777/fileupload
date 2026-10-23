@@ -91,6 +91,120 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- ONBOARDING CARD (visible when no repo is configured yet) -->
+            <FrameLayout
+                android:id="@+id/onboardingCard"
+                style="@style/Widget.GitHubUploader.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_github"
+                            app:tint="@color/md_primary" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:layout_weight="1"
+                            android:text="@string/onboarding_title"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textColor="@color/md_on_surface"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/onboarding_subtitle"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textColor="@color/md_on_surface_variant" />
+
+                    <Button
+                        android:id="@+id/btnOnboardingOAuth"
+                        style="@style/Widget.GitHubUploader.GradientButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="@string/onboarding_login_github" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnOnboardingManual"
+                        style="@style/Widget.GitHubUploader.Button.Outlined"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/onboarding_manual_token"
+                        app:icon="@drawable/ic_key"
+                        app:iconGravity="textStart"
+                        app:iconPadding="8dp"
+                        app:iconSize="18dp" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <!-- ACTIVE REPO QUICK SWITCHER PILL (visible when repo is configured) -->
+            <LinearLayout
+                android:id="@+id/activeRepoBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_choice_item"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="14dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="10dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_folder"
+                    app:tint="@color/md_primary" />
+
+                <TextView
+                    android:id="@+id/tvActiveRepoBanner"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                    android:textColor="@color/md_on_surface"
+                    tools:text="Активный репозиторий: gitstorage1247/my-files" />
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="@color/md_on_surface_variant" />
+            </LinearLayout>
+
             <!-- FILE -->
             <FrameLayout
                 style="@style/Widget.GitHubUploader.Card"

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card_surface"
+    android:orientation="vertical"
+    android:padding="22dp">
+
+    <LinearLayout
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_danger_circle"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_trash"
+            app:tint="@color/md_error" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:text="@string/delete_repo_title"
+        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+        android:textColor="@color/md_on_surface"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvDeleteRepoFullName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_thumb"
+        android:fontFamily="monospace"
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp"
+        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+        android:textColor="@color/md_error"
+        android:textStyle="bold"
+        tools:text="octocat/my-files" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:text="@string/delete_repo_warning"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:textColor="@color/md_on_surface_variant" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnConfirmDeleteRepo"
+        style="@style/Widget.GitHubUploader.Button.Danger"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="18dp"
+        android:text="@string/delete_repo_confirm"
+        app:cornerRadius="16dp"
+        app:icon="@drawable/ic_trash"
+        app:iconGravity="textStart"
+        app:iconPadding="8dp"
+        app:iconSize="18dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCancelDeleteRepo"
+        style="@style/Widget.GitHubUploader.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/cancel" />
+</LinearLayout>

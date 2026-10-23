@@ -33,12 +33,16 @@ public final class Prefs {
     public static GitHubConfig getConfig(Context ctx) {
         String json = sp(ctx).getString(KEY_CONFIG, null);
         if (json == null || json.isEmpty()) {
-            return new GitHubConfig();
+            GitHubConfig fresh = new GitHubConfig();
+            fresh.authMode = GitHubConfig.MODE_OAUTH;
+            return fresh;
         }
         try {
             GitHubConfig cfg = GSON.fromJson(json, GitHubConfig.class);
             if (cfg == null) {
-                return new GitHubConfig();
+                GitHubConfig fresh = new GitHubConfig();
+                fresh.authMode = GitHubConfig.MODE_OAUTH;
+                return fresh;
             }
             if (cfg.branch == null || cfg.branch.isEmpty()) {
                 cfg.branch = "main";
@@ -46,9 +50,30 @@ public final class Prefs {
             if (cfg.previewBranch == null || cfg.previewBranch.isEmpty()) {
                 cfg.previewBranch = "files";
             }
+            // Плавная миграция со старых версий, где был только ручной ввод
+            if (cfg.authMode == null || cfg.authMode.isEmpty()) {
+                if (cfg.token != null && !cfg.token.trim().isEmpty()) {
+                    cfg.authMode = GitHubConfig.MODE_MANUAL;
+                    if (cfg.manualToken == null || cfg.manualToken.isEmpty()) {
+                        cfg.manualToken = cfg.token;
+                    }
+                    if (cfg.manualOwner == null || cfg.manualOwner.isEmpty()) {
+                        cfg.manualOwner = cfg.owner == null ? "" : cfg.owner;
+                    }
+                    if (cfg.manualRepo == null || cfg.manualRepo.isEmpty()) {
+                        cfg.manualRepo = cfg.repo == null ? "" : cfg.repo;
+                    }
+                    cfg.manualBranch = cfg.branch;
+                    cfg.manualPreviewBranch = cfg.previewBranch;
+                } else {
+                    cfg.authMode = GitHubConfig.MODE_OAUTH;
+                }
+            }
             return cfg;
         } catch (Exception e) {
-            return new GitHubConfig();
+            GitHubConfig fresh = new GitHubConfig();
+            fresh.authMode = GitHubConfig.MODE_OAUTH;
+            return fresh;
         }
     }
 
@@ -117,6 +142,25 @@ public final class Prefs {
             }
         }
         saveHistory(ctx, merged);
+    }
+
+    /** Полностью удаляет локальный кэш истории удалённого репозитория. */
+    public static void removeRepoHistory(Context ctx, String owner, String repo) {
+        if (owner == null || repo == null) {
+            return;
+        }
+        List<UploadItem> all = getHistory(ctx);
+        List<UploadItem> kept = new ArrayList<>();
+        for (UploadItem existing : all) {
+            if (existing == null) continue;
+            boolean sameRepo = existing.owner != null && existing.repo != null
+                    && existing.owner.equalsIgnoreCase(owner)
+                    && existing.repo.equalsIgnoreCase(repo);
+            if (!sameRepo) {
+                kept.add(existing);
+            }
+        }
+        saveHistory(ctx, kept);
     }
 
     public static void addHistory(Context ctx, UploadItem item) {
