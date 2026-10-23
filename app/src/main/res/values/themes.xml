@@ -91,11 +91,16 @@
         <item name="android:ellipsize">end</item>
     </style>
 
+    <!-- Якорь-стиль без точек в имени: у стилей вида A.B без parent аапт2
+         подставляет неявного родителя A, поэтому для карточек родитель
+         указывается явно, а якорь не создаёт цепочки. -->
+    <style name="GitHubUploaderCardBase" />
+
     <!-- Карты — обычные ViewGroup с градиентным фоном. MaterialCardView
          намеренно не используется: его state-list animator ссылается на
          атрибуты темы, которые не обязаны резолвиться в любой билд-системе
          (иначе краш NumberFormatException: "?2130903938"). -->
-    <style name="Widget.GitHubUploader.Card">
+    <style name="Widget.GitHubUploader.Card" parent="GitHubUploaderCardBase">
         <item name="android:background">@drawable/bg_card_surface</item>
         <item name="android:padding">16dp</item>
         <item name="android:clipToPadding">false</item>
@@ -104,7 +109,7 @@
         <item name="android:foregroundGravity">center</item>
     </style>
 
-    <style name="Widget.GitHubUploader.Card.Elevated">
+    <style name="Widget.GitHubUploader.Card.Elevated" parent="Widget.GitHubUploader.Card">
         <item name="android:background">@drawable/bg_card_surface</item>
         <item name="android:padding">16dp</item>
         <item name="android:clipToPadding">false</item>
