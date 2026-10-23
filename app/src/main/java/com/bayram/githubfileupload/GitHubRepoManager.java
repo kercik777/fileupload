@@ -12,7 +12,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import okhttp3.Callback;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -79,7 +78,7 @@ public class GitHubRepoManager {
         HttpUrl url = repoUrl(cfg);
         Request request = auth(cfg).url(url).get().build();
 
-        http.newCall(request).enqueue(new Callback() {
+        http.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -128,7 +127,7 @@ public class GitHubRepoManager {
         HttpUrl repo = repoUrl(cfg);
         Request metaReq = auth(cfg).url(repo).get().build();
 
-        http.newCall(metaReq).enqueue(new Callback() {
+        http.newCall(metaReq).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -171,7 +170,7 @@ public class GitHubRepoManager {
         HttpUrl refUrl = api(cfg, "git/refs/heads/" + preview);
         Request refReq = auth(cfg).url(refUrl).get().build();
 
-        http.newCall(refReq).enqueue(new Callback() {
+        http.newCall(refReq).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -201,7 +200,7 @@ public class GitHubRepoManager {
         HttpUrl baseRef = api(cfg, "git/refs/heads/" + defaultBranch);
         Request req = auth(cfg).url(baseRef).get().build();
 
-        http.newCall(req).enqueue(new Callback() {
+        http.newCall(req).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -222,7 +221,7 @@ public class GitHubRepoManager {
                             .post(RequestBody.create(JSON_MT, body.toString()))
                             .build();
 
-                    http.newCall(createReq).enqueue(new Callback() {
+                    http.newCall(createReq).enqueue(new okhttp3.Callback() {
                         @Override
                         public void onResponse(okhttp3.Call c, Response r) throws IOException {
                             try {
@@ -275,7 +274,7 @@ public class GitHubRepoManager {
                 .put(RequestBody.create(JSON_MT, body.toString()))
                 .build();
 
-        http.newCall(request).enqueue(new Callback() {
+        http.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -321,6 +320,21 @@ public class GitHubRepoManager {
                 + "/blob/" + branch + "/" + enc;
         r.commitUrl = commitUrl;
         return r;
+    }
+
+    private static byte[] readBytes(File file) throws IOException {
+        java.io.FileInputStream fis = new java.io.FileInputStream(file);
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        try {
+            byte[] buf = new byte[64 * 1024];
+            int n;
+            while ((n = fis.read(buf)) != -1) {
+                bos.write(buf, 0, n);
+            }
+        } finally {
+            fis.close();
+        }
+        return bos.toByteArray();
     }
 
     private HttpUrl repoUrl(GitHubConfig cfg) {

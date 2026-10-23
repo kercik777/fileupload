@@ -13,6 +13,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,7 +23,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.File;
@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
     private TextView tvIdleStatus;
     private Button btnUpload;
     private View progressBox;
-    private CircularProgressIndicator progressBar;
+    private ProgressBar progressBar;
     private View downloadCard;
     private View previewCard;
     private TextView tvDownloadUrl;
@@ -284,7 +284,11 @@ public class MainActivity extends AppCompatActivity implements UploadChoiceBotto
         progressBox.setVisibility(View.GONE);
         tvIdleStatus.setVisibility(View.VISIBLE);
         tvIdleStatus.setText(R.string.status_failed);
-        toast(error == null || error.isEmpty() ? R.string.error_network : error);
+        if (error == null || error.isEmpty()) {
+            toast(R.string.error_network);
+        } else {
+            toast(error);
+        }
         btnUpload.setEnabled(true);
         updateIdleStatus();
     }

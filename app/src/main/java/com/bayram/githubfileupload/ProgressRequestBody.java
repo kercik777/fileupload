@@ -33,7 +33,7 @@ public class ProgressRequestBody extends RequestBody {
     }
 
     @Override
-    public long contentLength() {
+    public long contentLength() throws IOException {
         return delegate.contentLength();
     }
 

@@ -1,6 +1,6 @@
 package com.bayram.githubfileupload;
 
-import android.media.MediaController;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
@@ -20,6 +20,7 @@ import java.util.Locale;
 
 /**
  * Внутриприложенный предпросмотр фото и видео по ссылке.
+ * Управление видео — таплям ( play / pause ), без внешнях контроллеров.
  */
 public class PreviewActivity extends AppCompatActivity {
 
@@ -92,12 +93,19 @@ public class PreviewActivity extends AppCompatActivity {
             progressBar.setVisibility(View.VISIBLE);
             tvError.setVisibility(View.GONE);
             videoView.setVideoURI(Uri.parse(url));
-            MediaController controller = new MediaController(this);
-            videoView.setMediaController(controller);
             videoView.setOnPreparedListener(mp -> progressBar.setVisibility(View.GONE));
-            videoView.setOnErrorListener(mp -> {
+            videoView.setOnCompletionListener(mp -> progressBar.setVisibility(View.GONE));
+            videoView.setOnErrorListener((mp, what, extra) -> {
                 progressBar.setVisibility(View.GONE);
                 showError(getString(R.string.preview_unsupported));
+                return true;
+            });
+            videoView.setOnTouchListener(v -> {
+                if (videoView.isPlaying()) {
+                    videoView.pause();
+                } else {
+                    videoView.start();
+                }
                 return true;
             });
             videoView.start();
@@ -126,8 +134,8 @@ public class PreviewActivity extends AppCompatActivity {
             return;
         }
         try {
-            startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(link))
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Exception e) {
             Toast.makeText(this, R.string.preview_unsupported, Toast.LENGTH_SHORT).show();
         }

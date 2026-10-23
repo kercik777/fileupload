@@ -8,7 +8,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
@@ -115,7 +114,7 @@ public class ConfigActivity extends AppCompatActivity {
 
     private void setStatus(String text, boolean error) {
         tvStatus.setText(text);
-        tvStatus.setTextColor(ContextCompat.getColor(this,
+        tvStatus.setTextColor(getResources().getColor(
                 error ? R.color.md_error : R.color.md_primary));
     }
 }

@@ -11,7 +11,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import okhttp3.Callback;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -70,7 +69,7 @@ public class GitHubReleaseManager {
         HttpUrl url = api(cfg, "releases/tags/" + tag);
         Request request = auth(cfg).url(url).get().build();
 
-        http.newCall(request).enqueue(new Callback() {
+        http.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -112,7 +111,7 @@ public class GitHubReleaseManager {
                 .post(RequestBody.create(JSON_MT, body.toString()))
                 .build();
 
-        http.newCall(request).enqueue(new Callback() {
+        http.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -162,7 +161,7 @@ public class GitHubReleaseManager {
                 .header("Content-Type", contentType)
                 .build();
 
-        http.newCall(request).enqueue(new Callback() {
+        http.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -196,7 +195,7 @@ public class GitHubReleaseManager {
         HttpUrl url = api(cfg, "releases/tags/" + tag.trim());
         Request request = auth(cfg).url(url).get().build();
 
-        http.newCall(request).enqueue(new Callback() {
+        http.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -224,7 +223,7 @@ public class GitHubReleaseManager {
         HttpUrl url = api(cfg, "releases/" + releaseId);
         Request request = auth(cfg).url(url).delete().build();
 
-        http.newCall(request).enqueue(new Callback() {
+        http.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
@@ -249,7 +248,7 @@ public class GitHubReleaseManager {
         HttpUrl url = api(cfg, "git/refs/tags/" + tag);
         Request request = auth(cfg).url(url).delete().build();
 
-        http.newCall(request).enqueue(new Callback() {
+        http.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 try {
