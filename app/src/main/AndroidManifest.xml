@@ -46,7 +46,8 @@
         <activity
             android:name=".HistoryActivity"
             android:exported="false"
-            android:label="@string/title_history" />
+            android:label="@string/title_history"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
             android:name=".PreviewActivity"

@@ -22,9 +22,12 @@
             app:titleTextColor="@color/brand_on" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <ProgressBar
@@ -35,53 +38,129 @@
             android:indeterminate="true"
             android:visibility="gone" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:padding="16dp"
-            android:scrollbars="none" />
-
+        <!-- SEARCH BAR BY LINK OR FILENAME -->
         <LinearLayout
-            android:id="@+id/emptyBox"
+            android:id="@+id/historySearchBox"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="32dp"
-            android:visibility="gone">
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/bg_card_surface"
+            android:elevation="1dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="14dp"
+            android:paddingEnd="8dp">
 
             <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:alpha="0.7"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_history"
+                android:src="@drawable/ic_search"
                 app:tint="@color/md_primary" />
 
-            <TextView
-                android:id="@+id/tvEmpty"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:text="@string/history_empty"
-                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-                android:textColor="@color/md_on_surface_variant" />
+            <EditText
+                android:id="@+id/etHistorySearch"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:ellipsize="end"
+                android:hint="@string/history_search_hint"
+                android:imeOptions="actionSearch"
+                android:importantForAutofill="no"
+                android:inputType="textUri|textNoSuggestions"
+                android:singleLine="true"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                android:textColor="@color/md_on_surface"
+                android:textColorHint="@color/md_on_surface_variant" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnOpenSettings"
-                style="@style/Widget.GitHubUploader.Button.Tonal"
+                android:id="@+id/btnPasteSearch"
+                style="@style/Widget.GitHubUploader.Button.Text"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/history_open_settings"
+                android:layout_height="36dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:text="@string/history_search_paste"
+                android:textSize="12sp" />
+
+            <ImageButton
+                android:id="@+id/btnClearSearch"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/history_search_clear"
+                android:padding="8dp"
+                android:src="@drawable/ic_close"
                 android:visibility="gone"
-                app:icon="@drawable/ic_settings"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp" />
+                app:tint="@color/md_on_surface_variant" />
         </LinearLayout>
-    </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingStart="16dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="16dp"
+                android:scrollbars="none" />
+
+            <LinearLayout
+                android:id="@+id/emptyBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="32dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/ivEmptyIcon"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:alpha="0.7"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_history"
+                    app:tint="@color/md_primary" />
+
+                <TextView
+                    android:id="@+id/tvEmpty"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:text="@string/history_empty"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:textColor="@color/md_on_surface_variant" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnOpenSettings"
+                    style="@style/Widget.GitHubUploader.Button.Tonal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/history_open_settings"
+                    android:visibility="gone"
+                    app:icon="@drawable/ic_settings"
+                    app:iconGravity="textStart"
+                    app:iconPadding="8dp" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

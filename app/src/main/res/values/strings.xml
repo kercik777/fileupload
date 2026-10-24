@@ -187,7 +187,11 @@
     <string name="config_hint_token">Для работы нужен токен с правом repo (и delete_repo, если хотите удалять репозитории). Токен хранится только на устройстве.</string>
     <string name="config_hint_preview">Файлы для просмотра уходят на выбранную ветку репозитория, оттуда работают прямые ссылки raw и CDN jsDelivr.</string>
 
-    <!-- History (Online + Smart Delete) -->
+    <!-- History (Online + Smart Delete + Search) -->
+    <string name="history_search_hint">Поиск по ссылке или имени файла…</string>
+    <string name="history_search_paste">Вставить</string>
+    <string name="history_search_clear">Очистить поиск</string>
+    <string name="history_search_empty">По этой ссылке или запросу ничего не найдено</string>
     <string name="history_empty">В репозитории пока нет загруженных файлов</string>
     <string name="history_loading">Загрузка истории из GitHub…</string>
     <string name="history_need_config">Войдите через GitHub или укажите токен в настройках, чтобы загрузить все ваши файлы</string>
