@@ -447,12 +447,31 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onFormatChosen(int format) {
         if (format == FileFormatDialogFragment.FORMAT_PHOTO) {
+            applyAutoTagAndFolder("photo");
             launchPhotoPicker();
         } else if (format == FileFormatDialogFragment.FORMAT_VIDEO) {
+            applyAutoTagAndFolder("video");
             launchVideoPicker();
         } else {
+            applyAutoTagAndFolder("files");
             filePicker.launch(new String[]{"*/*"});
         }
+    }
+
+    /** Автоматически заполняет и сохраняет тег релиза и папку на ветке по выбранному формату. */
+    private void applyAutoTagAndFolder(String value) {
+        updatingInputsProgrammatically = true;
+        if (etTag != null) {
+            etTag.setText(value);
+            etTag.setSelection(value.length());
+        }
+        if (etBranchFolder != null) {
+            etBranchFolder.setText(value);
+            etBranchFolder.setSelection(value.length());
+        }
+        updatingInputsProgrammatically = false;
+        persistMainInputs();
+        updatePreviewHintText();
     }
 
     private void launchPhotoPicker() {

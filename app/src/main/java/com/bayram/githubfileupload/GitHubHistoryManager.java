@@ -408,7 +408,9 @@ public class GitHubHistoryManager {
                     }
 
                     long stampTime = FileUtils.parseTimestampPrefix(rawName);
-                    boolean inFilesDir = path.startsWith("files/");
+                    boolean inFilesDir = path.startsWith("files/")
+                            || path.startsWith("photo/")
+                            || path.startsWith("video/");
                     boolean inCustomDir = !customFolder.isEmpty() && path.startsWith(customFolder + "/");
                     boolean inLocal = knownLocalPaths.contains(path);
 
